@@ -1,0 +1,3 @@
+#!/usr/bin/env zsh
+# File/Directory finder using fd + fzf
+/opt/homebrew/bin/fd -H -t f -t d "$@" | /opt/homebrew/bin/fzf

@@ -3,9 +3,7 @@
 #
 # guard-skip (PATH に在れば skip) にせず常に先頭へ動かす (remove-then-prepend) のは、
 # skip だと /etc/zprofile の path_helper が /opt/homebrew/bin を後ろへ回した順序を復旧できず、
-# git が Apple Git に解決される回帰 (issue #68 系) が再発するため。位置まで含めて冪等。
-#
-# 検証: scripts/test-path-prepend.sh
+# git が Apple Git に解決される回帰が再発するため。位置まで含めて冪等。
 path_prepend() {
 	local dir
 	for dir in "$@"; do

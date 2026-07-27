@@ -45,7 +45,7 @@ brew "ghq"
 brew "git"
 brew "git-crypt"
 brew "git-delta"    # syntax-highlight diff pager (delta) — lazygit pagers 連携
-brew "git-secrets"  # pre-commit で known-format secret を block (ADR 0010)
+brew "git-secrets"  # pre-commit で known-format secret を block
 brew "glab"
 brew "lazygit"
 

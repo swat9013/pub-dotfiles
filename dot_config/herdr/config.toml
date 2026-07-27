@@ -1,0 +1,119 @@
+# herdr configuration
+# Full list of options / defaults: `herdr --default-config`
+# Kept intentionally minimal — v0.7 series is still under active development.
+# デフォルト値は書かない方針（v0.7 系の schema 変更に対する追随コストを最小化）。
+
+# remote (ssh) での初回起動時に onboarding 画面が出るのを抑止（設定選択済み）。
+# 未指定でも onboarding 扱いになるため false を明示する。
+onboarding = false
+
+[theme]
+# Follow host terminal light/dark appearance (Ghostty auto-switches on macOS).
+auto_switch = true
+dark_name = "catppuccin"
+light_name = "catppuccin-latte"
+
+[keys]
+# C-q は keybinds.zsh の `stty -ixon` で XON/XOFF から解放済み。
+prefix = "ctrl+q"
+
+# ペイン移動 prefix 不要
+focus_pane_left = "ctrl+left"
+focus_pane_down = "ctrl+down"
+focus_pane_up = "ctrl+up"
+focus_pane_right = "ctrl+right"
+
+# tab 移動 prefix 不要
+previous_tab = "shift+left"
+next_tab = "shift+right"
+
+# workspace 操作。Ghostty から cmd+shift+t → \x11t が注入される（cmd+t は Ghostty new_tab に返却）。
+# close は herdr デフォルト close_workspace = prefix+shift+d のまま（Ghostty cmd+w → \x11D）。
+new_workspace = "prefix+t"
+
+# workspace 巡回。Claude Code の shift+tab モード切替は不使用のため専有してよい。
+next_workspace = "shift+tab"
+
+# built-in default の譲り渡し: 下の [[keys.command]] が素文字 chord（prefix+e / prefix+g）
+# を使うため、default binding と衝突するものを shift 付きへ退避する。
+# edit_scrollback: default prefix+e → emacs 起動（prefix+e）に譲る
+edit_scrollback = "prefix+shift+s"
+# goto: default prefix+g → lazygit 起動（prefix+g）に譲る
+goto = "prefix+shift+o"
+
+# NOTE: 以下 3 つは popup type で使う。key は素文字 chord（prefix+g / prefix+f / prefix+e）で、
+# 衝突する edit_scrollback / goto は上で shift 付きへ退避してある。
+# width / height は popup 専用オプション（invalid な keybind 設定は有効な keybind ごと
+# 破棄される — upstream issue #747）。pane type に変える場合は必ず削除する。
+
+# lazygit（Ghostty cmd+g → \x11g）
+[[keys.command]]
+key = "prefix+g"
+type = "popup"
+command = "lazygit"
+width = "90%"
+height = "90%"
+
+# fzf ファイルピッカー（Ghostty cmd+f → \x11f）
+[[keys.command]]
+key = "prefix+f"
+type = "popup"
+command = "~/.config/herdr/file-picker.sh"
+width = "80%"
+height = "80%"
+
+# emacs（実行元 pane の repo ルートで emacs -nw。Ghostty cmd+e → \x11e）
+# クリップボードに repo 内ファイルのパスがあればそれを開く（path:line 対応）
+[[keys.command]]
+key = "prefix+e"
+type = "popup"
+command = "~/.config/herdr/emacs-popup.sh"
+width = "90%"
+height = "90%"
+
+# レイアウト
+# 現 pane を起点に split を積んで組む。既存 pane はそのまま残す（並び替え相当）。
+[[keys.command]]
+key = "prefix+shift+l"
+type = "shell"
+command = "~/.config/herdr/layouts/4col-lazygit.sh"
+
+[[keys.command]]
+key = "prefix+shift+e"
+type = "shell"
+command = "~/.config/herdr/layouts/emacs-dev.sh"
+
+# レイアウト選択メニュー (Ghostty cmd+i → `\x11i`)
+# 数字キーで即決、fzf incremental search も併用可。項目の定義は layout-menu.sh 側にある。
+[[keys.command]]
+key = "prefix+i"
+type = "popup"
+command = "~/.config/herdr/layout-menu.sh"
+width = "50%"
+height = "40%"
+
+[ui]
+# Show detected agent labels in pane borders.
+show_agent_labels_on_pane_borders = true
+
+[ui.toast]
+# herdr が agent 状態から通知を組み立て、外側ターミナル
+# （Ghostty: desktop-notifications = true）に発行を委譲する。
+delivery = "terminal"
+
+[experimental]
+# macOS + CJK IME: swap to an ASCII-capable input source while prefix mode is
+# active so prefix chords still register when the IME is on.
+switch_ascii_input_source_in_prefix = true
+
+# Expose the focused pane's cursor to the outer terminal so the IME candidate
+# window keeps tracking the cursor inside agent TUIs (Claude Code, Codex).
+reveal_hidden_cursor_for_cjk_ime = true
+cjk_ime_agents = ["claude", "codex"]
+
+# After changing this file, either restart herdr or run:
+#   herdr server reload-config
+#
+# Agent integrations are managed separately (not via this file):
+#   herdr integration install claude
+#   herdr integration status

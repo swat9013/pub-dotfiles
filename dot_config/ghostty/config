@@ -35,16 +35,16 @@ cursor-click-to-move = true
 copy-on-select = clipboard
 
 # キーバインド
-# herdr 委譲キー (α 方式: 常に herdr に転送、素 shell の副作用は受容)
+# herdr 委譲キー。herdr の外 (素 shell) でも同じ列が送られる
 # \x11 = C-q (herdr prefix)
 keybind = super+d=text:\x11v
 keybind = super+shift+d=text:\x11-
 keybind = super+shift+w=text:\x11x
 keybind = super+z=text:\x11z
-# cmd+i: レイアウトメニュー (herdr prefix+i → layout-menu.sh popup。PR #54 で接続済み)
+# cmd+i: レイアウトメニュー (herdr prefix+i → layout-menu.sh popup)
 keybind = super+i=text:\x11i
 # cmd+f: file-picker を起動 (herdr prefix+f)
-#   素文字 chord: v0.7.4 remote では ctrl chord (\x11\x06) が match しない (herdr config.toml の NOTE 参照)
+#   ctrl chord (\x11\x06) ではなく素文字 chord を送る。herdr 側の keybind 定義と揃える
 keybind = super+f=text:\x11f
 # cmd+b: 旧 swap-pane バインドを無効化
 keybind = super+b=unbind

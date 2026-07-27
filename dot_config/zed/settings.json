@@ -1,0 +1,47 @@
+{
+  "outline_panel": {
+    "dock": "left"
+  },
+  "collaboration_panel": {
+    "dock": "left"
+  },
+  "agent": {
+    "dock": "right",
+    "favorite_models": [],
+    "model_parameters": []
+  },
+  "disable_ai": true,
+  "show_edit_predictions": false,
+  "features": {
+    "edit_predictions": {
+      "provider": "none"
+    }
+  },
+  "project_panel": {
+    "dock": "left"
+  },
+  "cli_default_open_behavior": "existing_window",
+  "git_panel": {
+    "dock": "left",
+    "tree_view": true
+  },
+  "theme": {
+    "mode": "system",
+    "dark": "Tokyo Night",
+    "light": "Tokyo Night Light"
+  },
+  "buffer_font_family": "PlemolJP35",
+  "buffer_font_size": 12,
+  "tab_size": 2,
+  "hard_tabs": false,
+  "ensure_final_newline_on_save": true,
+  "remove_trailing_whitespace_on_save": true,
+  "autosave": "on_focus_change",
+  "format_on_save": "off",
+  "cursor_blink": false,
+  "restore_on_startup": "last_session",
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false
+  }
+}

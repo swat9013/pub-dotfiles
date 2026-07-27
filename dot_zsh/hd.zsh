@@ -5,10 +5,10 @@
 #   hd <session>           # ローカル: 明示 session 名で attach or 新規
 #   hd @<host> [session]   # リモート: ssh -t で接続し remote 上で herdr を直接実行
 #
-# @host が `herdr --remote` ではなく ssh + remote herdr 直接実行なのは設計判断 (ADR 0004)。
-# v0.7.4 の --remote (Mac client ↔ ssh bridge ↔ remote server) には popup 不描画
-# (issue #42) と prefix 後キー照合の不安定 (research 2026-07-17) の 2 つの upstream bug
-# があり、client/server を remote 同一ホストに置く ssh 直接実行はその経路自体を通らない。
+# @host が `herdr --remote` ではなく ssh + remote herdr 直接実行なのは意図的。
+# v0.7.4 の --remote (Mac client ↔ ssh bridge ↔ remote server) には popup 不描画と
+# prefix 後キー照合の不安定という 2 つの upstream bug があり、client/server を remote
+# 同一ホストに置く ssh 直接実行はその経路自体を通らない。
 #
 # 実装メモ:
 # - keepalive (ServerAlive*) は手書きオプションで付与する。旧 --remote 時代の
@@ -19,7 +19,7 @@
 #   prepend する (共有 primitive は ssh command 文字列内で remote 実行され source 不可なため inline)。
 # - session 名の '.' ':' → '_' 置換を行う (session id として安全な文字集合に正規化)。
 # HD_DRY_RUN=1 を立てると実行せず、組み立てた実行予定コマンドを stdout に print する
-# (scripts/test-hd.zsh が依存)。
+# (テスト用の契約)。
 
 hd() {
   local target="${1:-}"
@@ -47,7 +47,7 @@ hd() {
     #    それでも見つからなければ明示エラーで 127 を返す。
     # 2. stty -ixon: herdr は shell 側で ^Q (XON) を解放済みの tty を前提とする。
     #    sshd が確保する pty は IXON 有効のままなので、明示解放しないと prefix の
-    #    ^Q が XON として tty ドライバに食われ herdr に届かない (PR #41 と同根)。
+    #    ^Q が XON として tty ドライバに食われ herdr に届かない。
     local remote_cmd="export PATH=\"\$HOME/.local/bin:\$PATH\"; command -v herdr >/dev/null 2>&1 || { echo \"hd: remote host ${host} lacks herdr in PATH or ~/.local/bin\" >&2; exit 127; }; stty -ixon; ${herdr_cmd}"
 
     if [[ -n "${HD_DRY_RUN:-}" ]]; then

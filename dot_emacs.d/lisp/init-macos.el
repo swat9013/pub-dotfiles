@@ -14,8 +14,8 @@
 (defvar ns-function-modifier)
 (defvar ns-use-native-fullscreen)
 
-;; PATH は emacs -nw で親 zsh から継承済み。GUI Emacs.app は不採用 (ADR 0005)
-;; のため exec-path-from-shell は撤去。
+;; PATH は emacs -nw で親 zsh から継承済み。GUI Emacs.app は不採用のため
+;; exec-path-from-shell は撤去。
 
 ;; ============================================================
 ;; macOS キーボード設定

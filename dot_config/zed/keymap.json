@@ -1,0 +1,13 @@
+[
+  {
+    "bindings": {
+      "cmd-shift-c": "editor::CopyRelativePath"
+    }
+  },
+  {
+    "context": "Editor && extension == md",
+    "bindings": {
+      "cmd-shift-p": "markdown::OpenPreview"
+    }
+  }
+]
