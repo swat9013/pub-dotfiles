@@ -1,0 +1,82 @@
+[color]
+	ui = true
+[push]
+	default = simple
+[core]
+	excludesfile = ~/.gitignore_global
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	dark = true
+	line-numbers = false
+[alias]
+	alias = !git config --list | grep 'alias\\.' | sed 's/alias\\.\\([^=]*\\)=\\(.*\\)/\\1\\\t => \\2/' | sort
+	b = branch -a
+	br = browse-remote
+	sh = show
+	cm = commit
+	cmm = commit -m
+	co = checkout
+	d = diff
+	dc = diff --cached
+	di = diff
+	dic = diff --cached
+	difit = !npx difit . --include-untracked
+	de = diff --word-diff --ignore-all-space --ignore-blank-lines --color-moved=dimmed_zebra --color-moved-ws=ignore-all-space --diff-algorithm=histogram
+	dec = diff --cached --word-diff --ignore-all-space --ignore-blank-lines --color-moved=dimmed_zebra --color-moved-ws=ignore-all-space --diff-algorithm=histogram
+	dw = diff --word-diff
+	dcw = diff --cached --word-diff
+	diw = diff --word-diff
+	dicw = diff --cached --word-diff
+	dn = diff --numstat
+	din = diff --numstat
+	f = fetch --prune
+	fs = !git f && git su
+	ignore = "!f() { ([ ! -e .gitignore ] && touch .gitignore) | echo $1 >> .gitignore ;};f"
+	ignore-local = "!f() { [ ! -e .git/info/exclude ] && touch .git/info/exclude; echo $1 >> .git/info/exclude; };f"
+	ignore-local-dir = "!f() { mkdir -p \"$1\" && echo '*' > \"$1/.gitignore\"; };f"
+	info = remote show origin
+	l = log  --decorate --oneline --graph
+	ll = log  --decorate --stat --abbrev-commit
+	ls = log  --decorate --graph
+	la = log  --decorate --oneline --graph --all
+	lla = log  --decorate --stat --abbrev-commit --all
+  lsa = log  --decorate --graph --all
+  list = log --date=short --no-merges --pretty=format:"%s"
+	s = status --short --branch
+	st = status
+	unstage    = reset HEAD --
+	cancel     = reset --soft HEAD^
+	me         = !git config --get-regexp user
+	today = log --decorate --oneline --since='12 hour ago' --pretty=format:'%C(yellow)%h%Creset %s %C(green)- %an, %cr%Creset'
+	pullrebase = pull --rebase
+	addall = add --all
+	sed =  "!f () { git grep -l $1 | xargs sed -i '' -e \"s/$1/$2/g\" ; }; f"
+	sed-filename =  "!f () { git ls-files | grep $1 | sed \"p;s/$1/$2/g\" | xargs -n2 mv ; }; f"
+	subadd = "!f () { git subtree add --prefix=${1}  --squash ${2}  ${3} ;};f"
+	subpush = "!f () { git subtree push --prefix=${1}  --squash ${2}  ${3} ;};f"
+	subpull = "!f () { git subtree pull --prefix=${1}  --squash ${2}  ${3} ;};f"
+	rc = rm --cached
+	pushf = push --force-with-lease
+	pushu = !git push --set-upstream origin \"$(git rev-parse --abbrev-ref HEAD)\"
+	cofeature = "!f () { git checkout -b feature/$2 origin/$1;};f"
+	cofix = "!f () { git checkout -b fix/$2 origin/$1;};f"
+  log-messages = "log --pretty=format:\"%s\""
+	cmam = commit --amend --no-edit
+  lmr = "log --reverse --pretty=format:'- %s%C(auto)%n%w(0,2,2)%b%-'"
+  lmr-with-hash = "log --reverse --pretty=format:'- %C(reset)%h%C(reset) %s%C(auto)%n%w(0,2,2)%b%-'"
+  cmfix = '!f() { git commit --fixup=$1 && git rebase -i --autosquash $1^; }; f'
+	open = "!f() { url=$(git remote get-url ${1:-origin} | sed -e \"s|git@|https://|\" -e \"s|:|/|2\" -e \"s|\\.git$||\"); open \"$url\"; }; f"
+	mr = "!f() { branch=$(git rev-parse --abbrev-ref HEAD); url=$(git remote get-url ${1:-origin} | sed -e \"s|git@|https://|\" -e \"s|:|/|2\" -e \"s|\\.git$||\"); open \"$url/-/merge_requests?scope=all&state=opened&source_branch=$branch\"; }; f"
+	update = "!git add -A && git commit -m \"update $(date +%Y-%m-%d)\" && git push"
+[init]
+	defaultBranch = main
+[ghq]
+	root = ~/ghq
+[user]
+	useConfigOnly = true
+# machine-local な上書き用。identity ([user] / includeIf) はこちらで解決する。
+# 末尾 include なので local 側が本 file の設定を上書きできる。
+[include]
+	path = ~/.gitconfig.local

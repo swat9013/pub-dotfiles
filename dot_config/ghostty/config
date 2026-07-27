@@ -1,0 +1,67 @@
+# テーマ
+theme = TokyoNight Night
+
+# フォント
+font-size = 12
+
+# macOS固有
+macos-titlebar-style = transparent
+macos-option-as-alt = true
+
+# ウィンドウ
+window-padding-x = 8
+window-padding-y = 8
+window-padding-balance = true
+unfocused-split-opacity = 0.80
+unfocused-split-fill = #000000
+window-inherit-working-directory = false
+tab-inherit-working-directory = false
+
+# シェル統合
+shell-integration = detect
+shell-integration-features = cursor,sudo,no-title
+
+# セッション復元（タブ・スプリットのレイアウトを保存）
+window-save-state = always
+
+# デスクトップ通知（OSC 9/777対応）
+desktop-notifications = true
+
+# 分割線を Tokyo Night のアクセントカラーに
+split-divider-color = #3d59a1
+
+# カーソル・選択
+cursor-click-to-move = true
+copy-on-select = clipboard
+
+# キーバインド
+# herdr 委譲キー (α 方式: 常に herdr に転送、素 shell の副作用は受容)
+# \x11 = C-q (herdr prefix)
+keybind = super+d=text:\x11v
+keybind = super+shift+d=text:\x11-
+keybind = super+shift+w=text:\x11x
+keybind = super+z=text:\x11z
+# cmd+i: レイアウトメニュー (herdr prefix+i → layout-menu.sh popup。PR #54 で接続済み)
+keybind = super+i=text:\x11i
+# cmd+f: file-picker を起動 (herdr prefix+f)
+#   素文字 chord: v0.7.4 remote では ctrl chord (\x11\x06) が match しない (herdr config.toml の NOTE 参照)
+keybind = super+f=text:\x11f
+# cmd+b: 旧 swap-pane バインドを無効化
+keybind = super+b=unbind
+# cmd+g: lazygit を起動 (herdr prefix+g)
+keybind = super+g=text:\x11g
+# cmd+e: repo ルートで emacs を起動 (herdr prefix+e。クリップボードの repo 内パスを開く)
+keybind = super+e=text:\x11e
+# ペイン移動は herdr 側 direct binding (ctrl+left 等) に委ねる (Ghostty で書き換えない)
+
+# タブ操作: cmd+t は Ghostty デフォルト (new_tab) のまま使う (override しない)
+# cmd+shift+t: herdr workspace 新規作成 (herdr new_workspace = prefix+t)
+keybind = super+shift+t=text:\x11t
+# cmd+w: herdr workspace close (herdr close_workspace = prefix+shift+d、確認ダイアログあり)
+#   Ghostty の close_surface は cmd+w から外れる。ウィンドウ自体はメニューか cmd+q で閉じる
+keybind = super+w=text:\x11D
+# workspace 巡回は shift+tab (herdr 側 direct binding、Ghostty 設定不要)
+
+# Claude Code 複数行入力 (Shift+Enter を Option+Enter 相当に変換)
+# mux 非依存で Claude Code 向けの変換のため herdr 移行後も維持
+keybind = shift+enter=text:\x1b\r

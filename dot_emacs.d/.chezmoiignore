@@ -1,0 +1,20 @@
+# straight.el パッケージキャッシュ（broken symlink を含むランタイム生成物）
+straight/build/
+straight/build-cache.el
+straight/modified/
+straight/repos/
+
+# no-littering / Emacs 自動生成ファイル
+var/
+etc/
+auto-save-list/
+eln-cache/
+tree-sitter/
+transient/
+.cache/
+
+# バックアップ・一時ファイル
+*~
+\#*\#
+.\#*
+*.elc

@@ -1,0 +1,53 @@
+[[plugin.prepend_fetchers]]
+id  = "git"
+url = "*"
+run = "git"
+
+[[plugin.prepend_fetchers]]
+id  = "git"
+url = "*/"
+run = "git"
+
+[mgr]
+sort_by = "alphabetical"
+sort_dir_first = true
+sort_sensitive = false
+sort_reverse = false
+linemode = "none"
+show_hidden = true
+show_symlink = true
+ratio = [1, 3, 4]
+
+[preview]
+tab_size = 2
+max_width = 600
+max_height = 900
+cache_dir = ""
+image_filter = "lanczos3"
+image_quality = 90
+
+[opener]
+edit = [
+    { run = 'emacs -nw "$@"', block = true, for = "macos" },
+    { run = 'code "$@"', block = false, for = "macos" },
+]
+open = [
+    { run = 'open "$@"', desc = "Open with default app", for = "macos" },
+]
+reveal = [
+    { run = 'open -R "$@"', desc = "Reveal in Finder", for = "macos" },
+]
+play = [
+    { run = 'open "$@"', orphan = true, for = "macos" },
+]
+
+[open]
+rules = [
+    { name = "*.md", use = "edit" },
+    { name = "*.txt", use = "edit" },
+    { mime = "text/*", use = "edit" },
+    { mime = "image/*", use = "open" },
+    { mime = "video/*", use = "play" },
+    { mime = "audio/*", use = "play" },
+    { mime = "application/pdf", use = "open" },
+]

@@ -1,0 +1,44 @@
+## 重複パスを登録しない
+typeset -U path cdpath fpath manpath
+
+## 補完を有効化（24時間以上経過時のみ再生成）
+autoload -Uz compinit
+if [[ -n ~/.zcompdump(N.mh+24) ]]; then
+    compinit
+else
+    compinit -C
+fi
+autoload -U +X bashcompinit && bashcompinit
+
+# sheldon（キャッシュファイル方式）
+sheldon_cache="${XDG_CACHE_HOME:-$HOME/.cache}/sheldon/sheldon.zsh"
+sheldon_toml="${XDG_CONFIG_HOME:-$HOME/.config}/sheldon/plugins.toml"
+if [[ ! -r "$sheldon_cache" || "$sheldon_toml" -nt "$sheldon_cache" ]]; then
+    mkdir -p "${sheldon_cache:h}"
+    sheldon source > "$sheldon_cache"
+fi
+source "$sheldon_cache"
+unset sheldon_cache sheldon_toml
+
+eval "$(starship init zsh)"
+
+for conf in $HOME/.zsh/*.zsh; do
+    source ${conf};
+done
+
+# PATH の前置は共有 primitive に集約する (正本: ~/.config/shell/path-prepend.sh)。
+# 後に書いた dir ほど先頭 = 最終順位 .local/bin > go/bin > homebrew > /usr/local/sbin を保存。
+# Darwin gate は -d guard に委ねて撤去。remove-then-prepend が、/etc/zprofile の path_helper が
+# /opt/homebrew/bin を後ろへ回した順序を毎回先頭へ復旧する
+# (これがないと git が Apple Git に解決され _git 補完が失敗する)。
+. "${XDG_CONFIG_HOME:-$HOME/.config}/shell/path-prepend.sh"
+path_prepend /usr/local/sbin /opt/homebrew/sbin /opt/homebrew/bin "$HOME/go/bin" "$HOME/.local/bin"
+
+if [[ -f "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
+   source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
+fi
+
+if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+
+# machine-local な上書き用。最後に読むことで、ここまでの設定を上書きできる。
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

@@ -1,0 +1,31 @@
+gui:
+  # --- 主要パネルの非表示 ---
+  # 下部のコマンドログパネルを非表示
+  showCommandLog: false
+  # 右下のキーバインドヒント / Donate / Ask Question リンクを非表示
+  showBottomLine: false
+
+  # --- フォーカスパネル拡大（スタッシュ/コミットパネル単体非表示は lazygit 仕様上不可のため代替） ---
+  expandFocusedSidePanel: true
+  expandedSidePanelWeight: 3
+
+  # --- 装飾と情報密度のスリム化 ---
+  # ファイル一覧をツリーではなくフラットリスト表示
+  # showFileTree: false
+  # ファイル名前のアイコン非表示（Nerd Font 非依存にする）
+  showFileIcons: false
+  # 「5 of 20」等のリスト件数フッターを非表示
+  showListFooter: false
+  # 起動時ランダム Tip 抑制（コマンドログ非表示と整合）
+  showRandomTip: false
+
+git:
+  log:
+    # コミットパネル左の罫線グラフを非表示
+    showGraph: never
+
+  # --- diff pager（`|` キーで切替）---
+  # 1番目: delta（syntax highlight + 行番号）/ 2番目: difftastic（構造的 diff）
+  pagers:
+    - pager: delta --dark --paging=never
+    - externalDiffCommand: difft --color=always

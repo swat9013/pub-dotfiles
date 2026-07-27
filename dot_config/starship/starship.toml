@@ -1,0 +1,46 @@
+format = """
+$username$hostname$directory$git_branch$git_status$git_state$cmd_duration
+$custom$character"""
+
+add_newline = true
+
+[username]
+style_user = "yellow bold"
+style_root = "red bold"
+format = "[$user]($style)@"
+
+[hostname]
+ssh_only = true
+style = "red bold"
+format = "[$hostname]($style) "
+
+[custom.ssh_indicator]
+when = 'test -n "$SSH_CONNECTION"'
+command = 'printf "⚡ "'
+style = "red bold"
+format = "[$output]($style)"
+shell = ["sh", "--noprofile", "--norc"]
+
+[character]
+success_symbol = "[❯](purple)"
+error_symbol = "[❯](red)"
+
+[directory]
+style = "blue bold"
+truncation_length = 3
+truncate_to_repo = false
+
+[git_branch]
+style = "green"
+format = "[$branch]($style) "
+
+[git_status]
+style = "yellow"
+format = "[$all_status$ahead_behind]($style)"
+
+[git_state]
+style = "yellow bold"
+
+[cmd_duration]
+min_time = 5000
+style = "yellow dimmed"

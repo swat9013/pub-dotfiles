@@ -1,0 +1,60 @@
+# locale
+# LC_CTYPE が East Asian Ambiguous 幅 (⚡ など) を narrow 扱いするよう
+# LANG=en_US.UTF-8 を基底にする (LC_CTYPE は LANG にフォールバック)。
+# メッセージだけ日本語に戻すため LC_MESSAGES と LANGUAGE を ja_JP.UTF-8 にする。
+# LC_ALL は他をすべて上書きしてしまうので意図的に設定しない。
+export LANG="en_US.UTF-8"
+export LC_MESSAGES="ja_JP.UTF-8"
+export LANGUAGE="ja_JP.UTF-8"
+
+# XDG Base Directory: macOS の Go 製ツール (lazygit / gh など) が
+# デフォルトで ~/Library/Application Support を見るため、~/.config に統一する。
+export XDG_CONFIG_HOME="$HOME/.config"
+
+# 環境別設定（EDITOR判定前にPATHを確定させる）
+if [ "$(uname)" = 'Darwin' ]; then
+    export ANDROID_HOME=~/Library/Android/sdk
+    if [ -e /opt/homebrew/bin/brew ]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    fi
+elif [ "$(expr substr $(uname -s) 1 5)" = 'Linux' ]; then
+    export PATH=$HOME/.emacsenv/bin:$PATH
+    if [ -e /home/linuxbrew/.linuxbrew/bin/brew ]; then
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    fi
+elif [ "$(expr substr $(uname -s) 1 10)" = 'MINGW32_NT' ]; then
+else
+fi
+
+# editor
+# VS Code内のターミナルではVS Code、それ以外ではEmacsを優先
+if [ "$TERM_PROGRAM" = "vscode" ] && command -v code > /dev/null 2>&1; then
+    export EDITOR="code --wait"
+    export VISUAL="$EDITOR"
+    EDITOR_CMD="code"
+elif command -v emacs > /dev/null 2>&1; then
+    export EDITOR=emacs
+    export VISUAL="$EDITOR"
+    EDITOR_CMD="e"
+elif command -v code > /dev/null 2>&1; then
+    export EDITOR="code --wait"
+    export VISUAL="$EDITOR"
+    EDITOR_CMD="code"
+else
+    export EDITOR=vim
+    export VISUAL="$EDITOR"
+    EDITOR_CMD="vim"
+fi
+
+export CLICOLOR=true # lsコマンド時、自動で色がつく
+
+# Starship
+export STARSHIP_CONFIG="$HOME/.config/starship/starship.toml"
+
+# パッケージマネージャセキュリティ設定
+export UV_REQUIRE_VIRTUALENV=true
+export HOMEBREW_VERIFY_ATTESTATIONS=true
+export GOFLAGS="-mod=readonly"
+
+# machine-local な上書き用。アカウント固有の ID 等はこちらに置く。
+[ -r "$HOME/.zshenv.local" ] && . "$HOME/.zshenv.local"

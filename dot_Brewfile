@@ -1,0 +1,174 @@
+# Usage: brew bundle --global --cleanup
+
+# Taps (cross-platform)
+# Note: homebrew/bundle is deprecated and now built into brew core
+tap "k1low/tap"
+tap "microsoft/apm"
+tap "oven-sh/bun"
+tap "satococoa/tap"
+
+# CLI tools (cross-platform)
+brew "bash"
+brew "bat"
+brew "chezmoi"
+brew "microsoft/apm/apm"
+brew "coreutils"
+brew "curl"
+brew "fd"
+brew "ffmpeg"
+brew "fzf"
+brew "glow"
+brew "gogcli"
+brew "graphviz"
+brew "imagemagick"
+brew "jq"
+brew "ncdu"
+brew "nkf"
+brew "pkg-config"
+brew "pwgen"
+brew "ripgrep"
+brew "shellcheck"
+brew "tree"
+brew "wget"
+brew "zlib"
+
+# Shell (cross-platform)
+brew "herdr"        # agent-aware terminal multiplexer
+brew "sheldon"
+brew "starship"
+brew "zsh"
+
+# Git (cross-platform)
+brew "difftastic"   # 構造的diff CLI (difft) — difftastic.el 連携
+brew "gh"
+brew "ghq"
+brew "git"
+brew "git-crypt"
+brew "git-delta"    # syntax-highlight diff pager (delta) — lazygit pagers 連携
+brew "git-secrets"  # pre-commit で known-format secret を block (ADR 0010)
+brew "glab"
+brew "lazygit"
+
+# Dev tools (cross-platform)
+brew "mise"
+brew "oven-sh/bun/bun"
+brew "go"
+brew "uv"
+brew "openjdk"
+brew "emacs"
+brew "cmark-gfm"        # GFM → HTML (markdown-mode の M-x markdown-preview 用)
+brew "hadolint"
+brew "markdownlint-cli2"
+brew "mermaid-cli"
+brew "plantuml"
+
+# Infrastructure (cross-platform)
+brew "awscli"
+brew "aws-cdk"
+brew "deck"
+brew "openfortivpn"
+
+# AI (cross-platform)
+brew "crit"     # human-in-the-loop レビュー UI (agent からの /crit 連携)
+brew "ollama"
+
+# File manager (cross-platform)
+brew "yazi"
+brew "exiftool"
+brew "shared-mime-info"
+
+# Other (cross-platform)
+brew "libyaml"
+brew "todoist-cli"
+brew "worktrunk"
+brew "satococoa/tap/wtp"
+
+if OS.mac?
+  # Taps (macOS only)
+  tap "beeftornado/rmtree"
+  tap "homebrew/cask-fonts"
+  tap "macos-fuse-t/homebrew-cask"  # FUSE-T 公式 tap (sshfs-fuse-t 用)
+  tap "osx-cross/avr"
+  tap "songmu/tap"
+
+  # CLI tools (macOS only)
+  brew "gsed"          # Linux already has GNU sed
+  brew "mas"           # macOS App Store CLI
+  brew "rmtrash"       # macOS Trash integration
+  brew "terminal-notifier"
+
+  # Filesystem (macOS) — cask を brew より先に評価させるため CLI tools 群と分離
+  cask "fuse-t"        # kext 不要な FUSE 実装 (sshfs-fuse-t が依存)
+  brew "macos-fuse-t/homebrew-cask/sshfs-fuse-t"  # sshmount 用 (dot_zsh/sshfs.zsh)
+
+  # Infrastructure (macOS only)
+  brew "colima"        # Linux VM wrapper for Mac
+  brew "docker"        # WSL2 uses Docker Desktop / docker-engine instead
+  brew "docker-compose"
+
+  # Keyboard firmware (macOS only — physical device toolchain)
+  brew "osx-cross/avr/avr-gcc@8"
+  brew "avrdude"
+  brew "laminate"
+  brew "libusb"
+
+  # Other (macOS only)
+  brew "handbrake"
+  brew "postgresql"
+
+  # GUI apps (macOS cask)
+  cask "battery"
+  cask "codex"
+  cask "dash"
+  cask "dbeaver-community"
+  cask "drawio"
+  cask "ghostty"
+  cask "hammerspoon"
+  cask "keyclu"
+  cask "obs"
+  cask "obsidian"
+  cask "utm"
+  cask "via"
+  cask "visual-studio-code"
+  cask "xquartz"
+  cask "zed"
+
+  # Fonts (macOS cask)
+  cask "font-iosevka"
+  cask "font-monaspace"
+  cask "font-myrica"
+
+  # VS Code extensions (managed by macOS Code.app; WSL2 uses Remote-WSL)
+  vscode "3w36zj6.textlint"
+  vscode "anthropic.claude-code"
+  vscode "bierner.markdown-mermaid"
+  vscode "biomejs.biome"
+  vscode "cweijan.vscode-office"
+  vscode "davidanson.vscode-markdownlint"
+  vscode "eamodio.gitlens"
+  vscode "editorconfig.editorconfig"
+  vscode "esbenp.prettier-vscode"
+  vscode "github.copilot-chat"
+  vscode "gruntfuggly.todo-tree"
+  vscode "hashicorp.terraform"
+  vscode "hediet.vscode-drawio"
+  vscode "mhutchie.git-graph"
+  vscode "ms-ceintl.vscode-language-pack-ja"
+  vscode "ms-python.python"
+  vscode "ms-python.vscode-pylance"
+  vscode "ms-toolsai.jupyter"
+  vscode "ms-vscode-remote.remote-ssh"
+  vscode "ms-vscode-remote.remote-ssh-edit"
+  vscode "ms-vscode.remote-explorer"
+  vscode "pkief.material-icon-theme"
+  vscode "redhat.vscode-yaml"
+  vscode "streetsidesoftware.code-spell-checker"
+  vscode "tuttieee.emacs-mcx"
+  vscode "vue.volar"
+  vscode "yzhang.markdown-all-in-one"
+end
+
+if OS.linux?
+  # Linux/WSL2 specific additions go here.
+  # Docker / GUI apps / fonts are managed outside Linuxbrew on WSL2.
+end

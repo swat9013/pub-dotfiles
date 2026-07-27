@@ -1,0 +1,92 @@
+# Tokyo Night テーマ for Yazi
+
+[git]
+modified = { fg = "#e0af68" }
+added = { fg = "#9ece6a" }
+untracked = { fg = "#bb9af7" }
+ignored = { fg = "#626880" }
+deleted = { fg = "#f7768e" }
+updated = { fg = "#7aa2f7" }
+
+[mgr]
+cwd = { fg = "#7aa2f7", bold = true }
+
+[status]
+separator_open = ""
+separator_close = ""
+separator_style = { fg = "#626880", bg = "#1a1b26" }
+
+[input]
+border = { fg = "#7aa2f7" }
+title = {}
+value = {}
+selected = { reversed = true }
+
+[select]
+border = { fg = "#7aa2f7" }
+active = { fg = "#e0af68" }
+inactive = {}
+
+[tasks]
+border = { fg = "#7aa2f7" }
+title = {}
+hovered = { underline = true }
+
+[which]
+cols = 3
+mask = { bg = "#414868" }
+cand = { fg = "#9ece6a" }
+rest = { fg = "#a9b1d6" }
+desc = { fg = "#bb9af7" }
+separator = "  "
+separator_style = { fg = "#626880" }
+
+[help]
+on = { fg = "#9ece6a" }
+run = { fg = "#e0af68" }
+desc = { fg = "#a9b1d6" }
+hovered = { bg = "#292e42", bold = true }
+footer = { fg = "#a9b1d6", bg = "#1a1b26" }
+
+[filetype]
+rules = [
+    # ディレクトリ
+    { name = "*/", fg = "#7aa2f7" },
+
+    # 実行ファイル
+    { name = "*", is = "exec", fg = "#f7768e" },
+
+    # シンボリックリンク
+    { name = "*", is = "link", fg = "#7dcfff" },
+
+    # 隠しファイル
+    { name = ".*", fg = "#626880" },
+
+    # ドキュメント
+    { name = "*.md", fg = "#9ece6a" },
+    { name = "*.txt", fg = "#9ece6a" },
+    { name = "*.pdf", fg = "#9ece6a" },
+
+    # コード
+    { name = "*.rs", fg = "#bb9af7" },
+    { name = "*.js", fg = "#e0af68" },
+    { name = "*.ts", fg = "#7aa2f7" },
+    { name = "*.py", fg = "#7dcfff" },
+    { name = "*.rb", fg = "#f7768e" },
+    { name = "*.go", fg = "#7dcfff" },
+
+    # 画像
+    { name = "*.png", fg = "#e0af68" },
+    { name = "*.jpg", fg = "#e0af68" },
+    { name = "*.jpeg", fg = "#e0af68" },
+    { name = "*.gif", fg = "#e0af68" },
+    { name = "*.svg", fg = "#e0af68" },
+
+    # アーカイブ
+    { name = "*.zip", fg = "#f7768e" },
+    { name = "*.tar", fg = "#f7768e" },
+    { name = "*.gz", fg = "#f7768e" },
+
+    # デフォルト
+    { name = "*", fg = "#a9b1d6" },
+]
