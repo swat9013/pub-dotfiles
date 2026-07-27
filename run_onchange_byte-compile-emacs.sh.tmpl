@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# hash: {{ include "dot_emacs.d/init.el" | sha256sum }}{{ include "dot_emacs.d/early-init.el" | sha256sum }}{{ range (glob "dot_emacs.d/lisp/*.el") }}{{ include . | sha256sum }}{{ end }}
+#
+# run_onchange_byte-compile-emacs.sh.tmpl — Emacs elisp を chezmoi apply 後に
+# batch byte-compile する。source 側の .el (init.el / early-init.el / lisp/*.el)
+# のいずれかが変化するたびに hash template が別値になり、chezmoi が本 script を
+# 再実行する。emacs / lisp ディレクトリ / straight bootstrap が揃わないホストでは
+# 何もせず終了する。
+set -euo pipefail
+
+# emacs が入っていないホスト (最小構成の Linux server 等) では黙って skip する。
+if ! command -v emacs >/dev/null 2>&1; then
+  exit 0
+fi
+
+EMACS_DIR="$HOME/.emacs.d"
+if [ ! -d "$EMACS_DIR/lisp" ]; then
+  exit 0
+fi
+
+# straight bootstrap が無いホスト (最小構成で emacs だけ入っている等) では skip する。
+# -l init.el の compile 環境構築に straight が必須のため。
+if [ ! -f "$EMACS_DIR/straight/repos/straight.el/bootstrap.el" ]; then
+  exit 0
+fi
+
+cd "$EMACS_DIR"
+
+# stale .elc を先に全削除する。残したまま -l init.el すると module load が
+# 壊れた古い .elc を拾い、compile 環境の load-path が不完全になる。
+rm -f init.elc early-init.elc lisp/*.elc
+
+# -Q: user init の自動ロードを抑止しつつ、-l init.el で明示的に init.el をロードする。
+# これにより straight bootstrap と use-package の :straight keyword 統合が
+# compile 環境に揃い、use-package macro が正しく展開される。
+# (Emacs 29+ では use-package は組み込みで、compile 時に macro が実際に展開される。
+#  -Q 単体だと :straight keyword が parse error になり、use-package が展開結果を
+#  nil にして設定を silent に .elc から破棄してしまう。)
+# -L lisp: モジュール間相互参照を解決するため lisp/ を load-path に追加
+output=$(emacs --batch -Q -L lisp -l init.el -f batch-byte-compile lisp/*.el init.el early-init.el 2>&1) || {
+  status=$?
+  echo "$output"
+  exit "$status"
+}
+echo "$output"
+
+# use-package が form を parse できず設定を silent に破棄した場合、
+# emacs は exit 0 のまま "Failed to parse package" を出力するだけなので、
+# ここで検知して loud に失敗させる。
+if grep -q "Failed to parse package" <<<"$output"; then
+  echo "ERROR: use-package form の parse に失敗し、設定が .elc から欠落しています。" >&2
+  exit 1
+fi
