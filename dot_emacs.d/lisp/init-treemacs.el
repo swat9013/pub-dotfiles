@@ -32,6 +32,9 @@
 (declare-function treemacs-current-visibility "treemacs-scope")
 (declare-function treemacs-select-window "treemacs")
 (declare-function treemacs-get-local-window "treemacs-scope")
+;; treemacs-current-visibility は define-inline で、展開 body が
+;; treemacs-get-local-buffer も呼ぶ
+(declare-function treemacs-get-local-buffer "treemacs-scope")
 
 (defun my/treemacs-sync-to-width ()
   "フレーム幅に treemacs の表示状態を一致させる (冪等)。

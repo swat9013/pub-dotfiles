@@ -32,21 +32,22 @@
               (setq-local indent-tabs-mode nil))))
 
 ;; ============================================================
-;; CSS (Tree-sitter)
+;; CSS / SCSS
 ;; ============================================================
-(use-package css-ts-mode
+;; package 名は `css-mode' (css-ts-mode / scss-mode の実体は css-mode.el にある)。
+;; `.css' → css-mode、`.scss' → scss-mode は built-in の auto-mode-alist に
+;; 登録済みなので :mode は張らない。ts-mode への昇格は treesit-auto が
+;; grammar ready 時のみ行う (init-treesit.el の方針。:mode で css-ts-mode を
+;; 直接バインドすると grammar 未 ready 時にハードエラーになる)。
+;;
+;; 外部 scss-mode package (MELPA) は使わない。top-level で legacy flymake の
+;; `flymake-allowed-file-name-masks' に push しており、当該変数が削除された
+;; 現行 Emacs では load 時に void-variable で落ちる (upstream は 2018 年で停止)。
+(use-package css-mode
   :straight nil
-  :mode "\\.css\\'"
+  :defer t
   :custom
   (css-indent-offset 2))
-
-;; ============================================================
-;; SCSS
-;; ============================================================
-(use-package scss-mode
-  :mode "\\.scss\\'"
-  :custom
-  (scss-compile-at-save nil))
 
 ;; ============================================================
 ;; Markdown

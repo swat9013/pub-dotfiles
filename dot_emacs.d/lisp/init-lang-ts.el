@@ -40,7 +40,10 @@
 ;; ============================================================
 ;; JavaScript (Tree-sitter)
 ;; ============================================================
-(use-package js-ts-mode
+;; package 名は `js' (js-ts-mode の実体は js.el にある)。`js-ts-mode' を
+;; package 名にすると同名 library が無く、compile 時に use-package が生成する
+;; load が "Cannot load js-ts-mode" を出す。
+(use-package js
   :straight nil
   :defer t
   :init

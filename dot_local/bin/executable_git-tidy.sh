@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ~/.local/bin/git-tidy.sh
-# git tidy: main/master 最新化 + merged branch/worktree 掃除
+# git tidy: main/master 最新化 + merged branch/worktree 掃除 + detached worktree 掃除
 # 要件: bash 4+ (declare -A / associative array 使用のため)
 set -euo pipefail
 IFS=$'\n\t'
@@ -16,6 +16,7 @@ DRY_RUN=0
 NO_PULL=0
 TARGET_BRANCH=""
 declare -A WT_MAP=()
+DETACHED_WTS=()
 readonly PROTECTED_RE='^(develop|master|main|pre-release|release|development|staging|production)$'
 
 usage() {
@@ -26,6 +27,10 @@ usage: git tidy [<branch>] [--force] [--dry-run] [--no-pull]
   --force     dirty worktree も強制削除 (worktree remove --force + branch -D)
   --dry-run   実行対象を stdout に列挙のみ (削除しない)
   --no-pull   pull を skip (現在 branch 上で cleanup のみ)
+
+  掃除対象は 2 種: (1) <branch> に merge 済みの branch とその worktree
+  (2) branch を持たない detached HEAD の linked worktree (clean なもの。
+      commit は repo に残るため作業は失われない。dirty は --force のみ)
 EOF
 }
 
@@ -118,7 +123,8 @@ list_merged_branches() {
 }
 
 build_worktree_map() {
-  local path="" branch=""
+  # porcelain の先頭 block は必ず main working tree。detached でも絶対に消さない
+  local path="" branch="" is_main=1
   while IFS= read -r line; do
     case "$line" in
       "worktree "*) path="${line#worktree }"; branch="" ;;
@@ -126,7 +132,12 @@ build_worktree_map() {
         branch="${line#branch refs/heads/}"
         WT_MAP["$branch"]="$path"
         ;;
-      "") path=""; branch="" ;;
+      "detached")
+        if [[ $is_main -eq 0 && -n "$path" ]]; then
+          DETACHED_WTS+=("$path")
+        fi
+        ;;
+      "") path=""; branch=""; is_main=0 ;;
     esac
   done < <(git worktree list --porcelain)
 }
@@ -173,12 +184,49 @@ cleanup() {
     fi
     ((removed_branches++)) || true
   done <<<"$merged"
-  run_cmd "git worktree prune" git worktree prune
   local summary="summary: removed $removed_branches branches, $removed_worktrees worktrees, skipped $skipped dirty"
   if [[ $failed -gt 0 ]]; then
     summary+=", failed $failed"
   fi
   echo "$summary"
+}
+
+cleanup_detached() {
+  # branch を持たない linked worktree は list_merged_branches に載らないため別掃除。
+  # detached HEAD の commit は repo に残る (reflog/オブジェクトは消えない) ので
+  # clean なら安全に消せる。dirty は --force のみ。
+  local removed=0 skipped=0 failed=0
+  local wt
+  for wt in ${DETACHED_WTS[@]+"${DETACHED_WTS[@]}"}; do
+    local dirty=0
+    if [[ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]]; then
+      dirty=1
+    fi
+    if [[ $dirty -eq 1 && $FORCE -eq 0 ]]; then
+      echo "skip: detached worktree $wt is dirty (use --force to override)" >&2
+      ((skipped++)) || true
+      continue
+    fi
+    local wt_ok=1
+    if [[ $dirty -eq 1 ]]; then
+      run_cmd "git worktree remove --force $wt (detached)" git worktree remove --force "$wt" || wt_ok=0
+    else
+      run_cmd "git worktree remove $wt (detached)" git worktree remove "$wt" || wt_ok=0
+    fi
+    if [[ $wt_ok -eq 0 ]]; then
+      echo "warn: worktree remove failed for detached $wt (locked?)" >&2
+      ((failed++)) || true
+      continue
+    fi
+    ((removed++)) || true
+  done
+  if (( removed + skipped + failed > 0 )); then
+    local summary="summary(detached): removed $removed worktrees, skipped $skipped dirty"
+    if [[ $failed -gt 0 ]]; then
+      summary+=", failed $failed"
+    fi
+    echo "$summary"
+  fi
 }
 
 main() {
@@ -187,15 +235,16 @@ main() {
   resolve_target_branch
   checkout_and_pull
   prune_remotes
+  build_worktree_map
   local merged
   merged="$(list_merged_branches)"
   if [[ -z "$merged" ]]; then
     echo "no merged branches to clean up"
-    run_cmd "git worktree prune" git worktree prune
-    return 0
+  else
+    cleanup "$merged"
   fi
-  build_worktree_map
-  cleanup "$merged"
+  cleanup_detached
+  run_cmd "git worktree prune" git worktree prune
 }
 
 main "$@"

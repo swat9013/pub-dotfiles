@@ -38,6 +38,25 @@
 ;; 動的 remap によって ruby-mode 本体が呼ばれた時点で load → :config が走る
 ;; (advice が installed される)。Ruby ファイルを一切開かない起動 (batch 含む)
 ;; では load されない。
+;; advice 本体は top-level に置く。use-package の :config 内に define-advice を
+;; 書くと defun が非 top-level 扱いになり、同じ form 内の advice-add から見て
+;; "might not be defined at runtime" になる。
+(defun my/ruby-unindent-closing-paren (&rest _)
+  "Adjust indentation for closing parentheses."
+  (let ((column (current-column))
+        indent offset)
+    (save-excursion
+      (back-to-indentation)
+      (let ((state (syntax-ppss)))
+        (setq offset (- column (current-column)))
+        (when (and (eq (char-after) ?\))
+                   (not (zerop (car state))))
+          (goto-char (cadr state))
+          (setq indent (current-indentation)))))
+    (when indent
+      (indent-line-to indent)
+      (when (> offset 0) (forward-char offset)))))
+
 (use-package ruby-mode
   :straight nil
   :defer t
@@ -46,21 +65,7 @@
   (ruby-deep-indent-paren-style nil)
   :config
   ;; カスタムインデント (閉じ括弧の位置調整)
-  (define-advice ruby-indent-line (:after (&rest _) unindent-closing-paren)
-    "Adjust indentation for closing parentheses."
-    (let ((column (current-column))
-          indent offset)
-      (save-excursion
-        (back-to-indentation)
-        (let ((state (syntax-ppss)))
-          (setq offset (- column (current-column)))
-          (when (and (eq (char-after) ?\))
-                     (not (zerop (car state))))
-            (goto-char (cadr state))
-            (setq indent (current-indentation)))))
-      (when indent
-        (indent-line-to indent)
-        (when (> offset 0) (forward-char offset))))))
+  (advice-add 'ruby-indent-line :after #'my/ruby-unindent-closing-paren))
 
 ;; ============================================================
 ;; ruby-end (end 自動挿入)

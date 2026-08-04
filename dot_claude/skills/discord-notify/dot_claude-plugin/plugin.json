@@ -1,0 +1,8 @@
+{
+  "name": "discord-notify",
+  "version": "0.1.0",
+  "description": "Claude が入力待ち / 応答完了で止まったときに Discord へ通知する hook。応答完了は Haiku で 1 文に要約する",
+  "author": {
+    "name": "swat9013"
+  }
+}

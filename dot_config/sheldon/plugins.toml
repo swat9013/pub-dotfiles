@@ -5,8 +5,10 @@ shell = "zsh"
 [plugins.zsh-defer]
 github = "romkatv/zsh-defer"
 
+# defer は zsh-defer を直に呼ばず dot_zshrc の startup_defer 経由にする。
+# ZSH_STARTUP_NO_DEFER=1 の同期実行スイッチを 1 箇所に集めるため (#120)。
 [templates]
-defer = "{% for file in files %}zsh-defer source \"{{ file }}\"\n{% endfor %}"
+defer = "{% for file in files %}startup_defer source \"{{ file }}\"\n{% endfor %}"
 
 [plugins.zsh-syntax-highlighting]
 github = "zsh-users/zsh-syntax-highlighting"
@@ -21,6 +23,9 @@ github = "ohmyzsh/ohmyzsh"
 dir = "lib"
 use = ["{completion,directories}.zsh"]
 
+# zsh-abbr は _abbr_init が実測 ~32ms を占めるため defer する (#120)。
+# widget / keybind の登録も遅れるので、prompt 直後の 1 打鍵だけ abbr 展開が効かない
+# 可能性がある。実用上踏まないことを実機で確認済み。
 [plugins.zsh-abbr]
 github = "olets/zsh-abbr"
-apply = ["source"]
+apply = ["defer"]

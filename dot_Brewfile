@@ -94,7 +94,6 @@ if OS.mac?
   # CLI tools (macOS only)
   brew "gsed"          # Linux already has GNU sed
   brew "mas"           # macOS App Store CLI
-  brew "rmtrash"       # macOS Trash integration
   brew "terminal-notifier"
 
   # Filesystem (macOS) — cask を brew より先に評価させるため CLI tools 群と分離

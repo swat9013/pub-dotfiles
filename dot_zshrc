@@ -2,43 +2,54 @@
 typeset -U path cdpath fpath manpath
 
 ## 補完を有効化（24時間以上経過時のみ再生成）
+# 判定は必ず配列展開で行う。[[ ]] 内では filename generation が起きず
+# `[[ -n ~/.zcompdump(N.mh+24) ]]` は glob 文字列そのものを見て常に真になるため、
+# fresh な dump でも compaudit + compdump（実測 ~25ms）が毎起動走っていた (#120)。
+# 条件は「24 時間以内に更新された dump が在る」を取る。dump 不在も 0 件になるので、
+# 初回起動が -C（dump 前提）に落ちる穴を作らずに 1 つの glob で両方を捌ける。
 autoload -Uz compinit
-if [[ -n ~/.zcompdump(N.mh+24) ]]; then
-    compinit
-else
+_zcompdump_fresh=( ~/.zcompdump(N.mh-24) )
+if (( $#_zcompdump_fresh )); then
     compinit -C
+else
+    compinit
 fi
+unset _zcompdump_fresh
 autoload -U +X bashcompinit && bashcompinit
 
-# sheldon（キャッシュファイル方式）
-sheldon_cache="${XDG_CACHE_HOME:-$HOME/.cache}/sheldon/sheldon.zsh"
-sheldon_toml="${XDG_CONFIG_HOME:-$HOME/.config}/sheldon/plugins.toml"
-if [[ ! -r "$sheldon_cache" || "$sheldon_toml" -nt "$sheldon_cache" ]]; then
-    mkdir -p "${sheldon_cache:h}"
-    sheldon source > "$sheldon_cache"
-fi
-source "$sheldon_cache"
-unset sheldon_cache sheldon_toml
+# 遅延実行の共有ラッパ。zsh-defer は sheldon の cache 経由で入るため、cache を source
+# する前に定義しておく必要がある（sheldon の defer template もこれを呼ぶ）。
+# ZSH_STARTUP_NO_DEFER=1 で同期実行に落ちる。scripts/zsh-startup-benchmark.sh が
+# total work（deferred 分を含む総 work）を計測するための単一のスイッチであり、
+# defer 起因の挙動を切り分けたいときの手動 escape hatch も兼ねる。
+startup_defer() {
+    if [[ -z "${ZSH_STARTUP_NO_DEFER:-}" ]] && (( $+functions[zsh-defer] )); then
+        zsh-defer "$@"
+    else
+        "$@"
+    fi
+}
 
-eval "$(starship init zsh)"
+# sheldon: plugin 定義（plugins.toml）を変えたときも再生成が要るので -d で足す。
+cache_eval sheldon -d "${XDG_CONFIG_HOME:-$HOME/.config}/sheldon/plugins.toml" sheldon source
+
+cache_eval starship starship init zsh
 
 for conf in $HOME/.zsh/*.zsh; do
     source ${conf};
 done
 
-# PATH の前置は共有 primitive に集約する (正本: ~/.config/shell/path-prepend.sh)。
-# 後に書いた dir ほど先頭 = 最終順位 .local/bin > go/bin > homebrew > /usr/local/sbin を保存。
-# Darwin gate は -d guard に委ねて撤去。remove-then-prepend が、/etc/zprofile の path_helper が
-# /opt/homebrew/bin を後ろへ回した順序を毎回先頭へ復旧する
+# PATH の順序は共有 primitive に集約する (正本: ~/.config/shell/path-layout.sh)。
+# /etc/zprofile の path_helper が /opt/homebrew/bin を後ろへ回した順序を毎回先頭へ復旧する
 # (これがないと git が Apple Git に解決され _git 補完が失敗する)。
-. "${XDG_CONFIG_HOME:-$HOME/.config}/shell/path-prepend.sh"
-path_prepend /usr/local/sbin /opt/homebrew/sbin /opt/homebrew/bin "$HOME/go/bin" "$HOME/.local/bin"
+# .zshrc は対話 shell でしか読まれないため、非対話 login shell 向けに .zlogin も同じものを読む。
+. "${XDG_CONFIG_HOME:-$HOME/.config}/shell/path-layout.sh"
 
 if [[ -f "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
    source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
 fi
 
-if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+if command -v wt >/dev/null 2>&1; then cache_eval wt wt config shell init zsh; fi
 
 # machine-local な上書き用。最後に読むことで、ここまでの設定を上書きできる。
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

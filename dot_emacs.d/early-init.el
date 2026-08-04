@@ -30,6 +30,10 @@
 ;; ============================================================
 ;; Native Compilation 設定 (Emacs 29+)
 ;; ============================================================
+;; early-init の compile 時点では comp.el 未ロードで defcustom が存在しないため
+;; 宣言のみ置く (実体は native-comp ビルドの runtime で定義される)。
+(defvar native-comp-async-report-warnings-errors)
+
 (when (featurep 'native-compile)
   ;; 警告を抑制
   (setq native-comp-async-report-warnings-errors 'silent)

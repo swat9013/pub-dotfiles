@@ -11,16 +11,25 @@ export LANGUAGE="ja_JP.UTF-8"
 # デフォルトで ~/Library/Application Support を見るため、~/.config に統一する。
 export XDG_CONFIG_HOME="$HOME/.config"
 
+# 起動時の `eval "$(tool init)"` は共有 primitive に集約する
+# (正本: ~/.config/shell/cache_eval.sh)。cache が有効な間は fork ごと消える。
+# -r guard を付けないのは意図的。この file は .zshenv 自身と同じ chezmoi apply で入るので、
+# 不在は「壊れた install」であり、黙って skip すると直後の brew shellenv も無音で落ちて
+# PATH が壊れたまま気づけない。fail fast させる。
+. "${XDG_CONFIG_HOME}/shell/cache_eval.sh"
+
 # 環境別設定（EDITOR判定前にPATHを確定させる）
+# brew shellenv は shell を自動判定して出力を変えるため、cache する側では zsh を明示する
+# (cache file が bash 文法で焼かれるのを防ぐ)。
 if [ "$(uname)" = 'Darwin' ]; then
     export ANDROID_HOME=~/Library/Android/sdk
     if [ -e /opt/homebrew/bin/brew ]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
+        cache_eval brew-shellenv /opt/homebrew/bin/brew shellenv zsh
     fi
 elif [ "$(expr substr $(uname -s) 1 5)" = 'Linux' ]; then
     export PATH=$HOME/.emacsenv/bin:$PATH
     if [ -e /home/linuxbrew/.linuxbrew/bin/brew ]; then
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        cache_eval brew-shellenv /home/linuxbrew/.linuxbrew/bin/brew shellenv zsh
     fi
 elif [ "$(expr substr $(uname -s) 1 10)" = 'MINGW32_NT' ]; then
 else
@@ -47,6 +56,10 @@ else
 fi
 
 export CLICOLOR=true # lsコマンド時、自動で色がつく
+
+# less の既定オプション。alias less='less -qnR' で上書きしていたのを環境変数へ移設した
+# （コマンド名を alias で上書きすると、素の less を期待した呼び出しが黙って別挙動になる）
+export LESS="-qnR"
 
 # Starship
 export STARSHIP_CONFIG="$HOME/.config/starship/starship.toml"

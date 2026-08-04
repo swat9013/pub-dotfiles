@@ -19,6 +19,8 @@
 (declare-function vertico-mode "vertico")
 (declare-function marginalia-mode "marginalia")
 (declare-function consult-customize "consult")
+;; consult-customize は macro で、展開結果が consult--customize-put を直接呼ぶ
+(declare-function consult--customize-put "consult")
 (declare-function consult-xref "consult-xref")
 (declare-function global-corfu-mode "corfu")
 (declare-function cape-dabbrev "cape")

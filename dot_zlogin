@@ -1,0 +1,13 @@
+# 非対話 login shell (`zsh -lc`、およびその形で shell を起こす tool) 向けの PATH 順序復旧。
+# /etc/zprofile の path_helper は .zshenv が先頭へ置いた /opt/homebrew/bin を末尾へ回すが、
+# その復旧は .zshrc にしか無く、.zshrc は対話 shell でしか読まれない。結果として非対話
+# login shell では bash が /bin/bash (macOS 同梱 3.2) に解決され、bash 4+ を前提にした
+# script が壊れる。.zlogin は login shell なら対話・非対話を問わず読まれるためここで補う。
+# (~/.zprofile は各種 installer が追記する持ち物なので使わない)
+#
+# 対話 shell を除外するのは、.zshrc で復旧済みで二度手間なのに加え、.zlogin が
+# 「最後に読んで上書きできる」契約の .zshrc.local より後に走るため。無条件に走らせると
+# .zshrc.local が PATH を触ったときそれを黙って上書きしてしまう。
+if [[ ! -o interactive ]]; then
+    . "${XDG_CONFIG_HOME:-$HOME/.config}/shell/path-layout.sh"
+fi

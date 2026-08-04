@@ -8,7 +8,7 @@
 # `herdr pane current` にフォールバックするので、直接 keybind 起動 (prefix+shift+l/e) とも共存する)。
 #
 # 3 variant (incremental / 数字即決 / +pane 操作) を比較して数字即決を採った。
-# 1..3 は「pane を生成する layout」、4 (even) は「既存 pane の整地」。
+# 1 (even) は「既存 pane の整地」、2..4 は「pane を生成する layout」。
 # pane 操作 (kill / swap) の同居はメニューが散らかるため入れていない。
 
 set -euo pipefail
@@ -20,10 +20,10 @@ selected=$(fzf --reverse --height=100% --prompt='layout> ' --no-info \
 	--bind='2:pos(2)+accept' \
 	--bind='3:pos(3)+accept' \
 	--bind='4:pos(4)+accept' <<'EOF'
-1 ide
-2 4col-lazygit
-3 emacs-dev
-4 even
+1 even
+2 ide
+3 4col-lazygit
+4 emacs-dev
 EOF
 ) || exit 0
 

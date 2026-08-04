@@ -23,9 +23,10 @@
 ;; diff-hl: Git差分を行単位で可視化
 ;; ============================================================
 (use-package diff-hl
+  ;; magit-pre-refresh は張らない。diff-hl 1.11.0 で diff-hl-magit-pre-refresh は
+  ;; ignore への obsolete alias になり、post-refresh 側だけで更新が完結する。
   :hook ((after-init . global-diff-hl-mode)
          (dired-mode . diff-hl-dired-mode)
-         (magit-pre-refresh . diff-hl-magit-pre-refresh)
          (magit-post-refresh . diff-hl-magit-post-refresh))
   :config
   ;; ターミナルEmacs用（GUI不要の場合はマージンに表示）

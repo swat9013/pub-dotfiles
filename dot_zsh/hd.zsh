@@ -74,10 +74,9 @@ hd() {
   herdr --session "$session"
 }
 
-# herdr 純正の zsh 補完 (herdr コマンド用) を hot path で eval 展開する。
-# 静的ファイル生成 (fpath) 方式より 1 行で済む単純さを優先。実測でネックになったら
-# `~/.zsh/completions/_herdr` への出力 + fpath 化に移行する。
-command -v herdr >/dev/null && eval "$(herdr completion zsh)"
+# herdr 純正の zsh 補完 (herdr コマンド用)。実測 13.5ms が起動 hot path に乗っていたため
+# (#120)、fpath 化ではなく共有 primitive cache_eval に寄せた。1 行のままで fork が消える。
+command -v herdr >/dev/null && cache_eval herdr herdr completion zsh
 
 # hd ラッパー用の補完: `@` prefix 消費で ssh host 補完、それ以外は herdr session 名補完。
 # ssh host 収集は sshfs.zsh の _sshmount_collect_hosts をそのまま流用する

@@ -6,6 +6,10 @@
   "effortLevel": "high",
   "enabledPlugins": {
     "claude-mem@thedotmack": true,
+    "claude-security@claude-plugins-official": true,
+    "evolutionary-naming@kawasima-skills": true,
+    "mattpocock-skills@claude-plugins-official": true,
+    "modularity@vladikk-modularity": true,
     "superpowers@claude-plugins-official": true
   },
   "env": {
@@ -18,9 +22,21 @@
     "ENABLE_TOOL_SEARCH": "true"
   },
   "extraKnownMarketplaces": {
+    "kawasima-skills": {
+      "source": {
+        "repo": "kawasima/evolutionary-naming",
+        "source": "github"
+      }
+    },
     "thedotmack": {
       "source": {
         "repo": "thedotmack/claude-mem",
+        "source": "github"
+      }
+    },
+    "vladikk-modularity": {
+      "source": {
+        "repo": "vladikk/modularity",
         "source": "github"
       }
     }
@@ -39,8 +55,9 @@
       }
     ]
   },
-  "language": "日本語でMBTIでINTJの人がわかりやすい話し方",
+  "language": "ja",
   "model": "opus",
+  "outputStyle": "judgment-audit",
   "permissions": {
     "allow": [
       "AskUserQuestion",
@@ -51,7 +68,6 @@
       "Bash(cat:*)",
       "Bash(cd:*)",
       "Bash(comm:*)",
-      "Bash(cursor agent:*)",
       "Bash(date:*)",
       "Bash(diff:*)",
       "Bash(docker compose logs:*)",
@@ -88,30 +104,12 @@
       "Bash(glab variable list:*)",
       "Bash(go build:*)",
       "Bash(go test:*)",
-      "Bash(gog auth list:*)",
-      "Bash(gog calendar events:*)",
-      "Bash(gog config list:*)",
-      "Bash(gog contacts list:*)",
-      "Bash(gog contacts search:*)",
-      "Bash(gog drive ls:*)",
-      "Bash(gog drive search:*)",
-      "Bash(gog gmail filters list:*)",
-      "Bash(gog gmail labels list:*)",
-      "Bash(gog gmail messages search:*)",
-      "Bash(gog gmail search:*)",
-      "Bash(gog gmail thread get:*)",
-      "Bash(gog ls:*)",
-      "Bash(gog open:*)",
-      "Bash(gog search:*)",
-      "Bash(gog tasks list:*)",
-      "Bash(gog version:*)",
       "Bash(grep:*)",
       "Bash(head:*)",
       "Bash(jq:*)",
       "Bash(ls:*)",
       "Bash(make:*)",
       "Bash(mkdir:*)",
-      "Bash(mmdc:*)",
       "Bash(npm run:*)",
       "Bash(npm test:*)",
       "Bash(open:*)",
@@ -121,6 +119,7 @@
       "Bash(python -m pytest:*)",
       "Bash(rails test:*)",
       "Bash(rspec:*)",
+      "Bash(sed -n:*)",
       "Bash(shellcheck:*)",
       "Bash(sort:*)",
       "Bash(tail:*)",
@@ -185,8 +184,6 @@
       "Bash(npx:*)",
       "Bash(pnpm dlx:*)",
       "Bash(pnpm exec:*)",
-      "Bash(rm:*)",
-      "Bash(rmtrash:*)",
       "Bash(uv add:*)",
       "Bash(uv pip install:*)",
       "Bash(uv sync:*)",
@@ -206,7 +203,6 @@
       "Bash(/usr/local/bin/zsh:*)",
       "Bash(bash:*)",
       "Bash(chmod 777:*)",
-      "Bash(find:*)",
       "Bash(git add --all:*)",
       "Bash(git add -A:*)",
       "Bash(git add .)",
@@ -218,11 +214,17 @@
       "Bash(git reset --hard:*)",
       "Bash(node -e:*)",
       "Bash(perl -e:*)",
+      "Bash(python -:*)",
       "Bash(python -c:*)",
+      "Bash(python3 -:*)",
       "Bash(python3 -c:*)",
+      "Bash(rm -rf $HOME)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/)",
       "Bash(ruby -e:*)",
       "Bash(scp:*)",
-      "Bash(sed:*)",
+      "Bash(sed -i:*)",
       "Bash(sh:*)",
       "Bash(ssh:*)",
       "Bash(sudo:*)",
@@ -233,12 +235,7 @@
       "Edit(**/*.p12)",
       "Edit(**/*.pem)",
       "Edit(**/*.pfx)",
-      "Edit(**/.env)",
-      "Edit(**/.env.*)",
-      "Edit(**/.netrc)",
-      "Edit(**/credentials*)",
-      "Edit(**/private/**)",
-      "Edit(**/secrets/**)",
+      "Edit(**/.env*)",
       "Edit(~/.claude/CLAUDE.md)",
       "Edit(~/.claude/agents/**)",
       "Edit(~/.claude/hooks/**)",
@@ -246,6 +243,7 @@
       "Edit(~/.claude/settings.json)",
       "Edit(~/.claude/skills/**)",
       "Edit(~/.claude/statusline.sh)",
+      "Edit(~/.netrc)",
       "Edit(~/.ssh/**)",
       "NotebookEdit",
       "Read(**/*.crt)",
@@ -253,16 +251,7 @@
       "Read(**/*.p12)",
       "Read(**/*.pem)",
       "Read(**/*.pfx)",
-      "Read(**/*secret*)",
-      "Read(**/.env)",
-      "Read(**/.env.*)",
-      "Read(**/.netrc)",
-      "Read(**/.npmrc)",
-      "Read(**/.pypirc)",
-      "Read(**/.ssh/**)",
-      "Read(**/credentials*)",
-      "Read(**/private/**)",
-      "Read(**/secrets/**)",
+      "Read(**/.env*)",
       "Read(~/.aws/**)",
       "Read(~/.config/gcloud/**)",
       "Read(~/.config/gh/**)",

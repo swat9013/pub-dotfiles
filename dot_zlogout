@@ -1,2 +1,8 @@
-# ssh-agent -k
-ps ax | grep 'ssh-agent' | grep -v grep | awk '{print $1}' | xargs kill
+# macOS では launchd が ssh-agent の lifecycle を所有するため kill しない。
+# kill すると次の login shell が agent の再 spawn 待ちで約 10 秒 stall する (issue #119)。
+# 非 Darwin では `ssh-aa` が login session ごとに agent を自前 spawn するため、
+# その session の agent だけを掃除する (放置すると remote host に orphan が残る)。
+# 既に停止済み / 未 spawn でも失敗しない = logout を繰り返しても安全。
+if [[ "$(uname)" != 'Darwin' && -n "${SSH_AGENT_PID:-}" ]]; then
+    ssh-agent -k >/dev/null 2>&1
+fi

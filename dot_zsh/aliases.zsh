@@ -3,17 +3,9 @@
 #
 # linux
 #
-alias grep='grep --color=auto'
 alias ps-grep="ps aux | grep"
 alias sed-filename='(){find ./ -type f | sed \"p;s/$1/$2/\" | xargs -n2 mv}'
 alias relogin="exec $SHELL -l"
-
-alias diff='diff -u'
-
-#rmtrash
-if which rmtrash >/dev/null 2>&1 ;then
-    alias rm='rmtrash'
-fi
 
 #
 # editor
@@ -31,16 +23,9 @@ function e() {
 # ssh
 #
 if [[ "$(uname)" == 'Darwin' ]]; then
-    # macOS launchd ssh-agent は idle で kill され、再起動後は空になる。
-    # かつ Apple-OpenSSH は UseKeychain 経由で読んだ鍵を agent に乗せない。
-    # → precmd で「id_rsa が agent に無ければ keychain から再ロード」する。
-    _ssh_ensure_id_rsa() {
-        ssh-add -l 2>/dev/null | grep -q "id_rsa " || \
-            ssh-add --apple-use-keychain --quiet "$HOME/.ssh/id_rsa" 2>/dev/null
-    }
-    _ssh_ensure_id_rsa
-    autoload -Uz add-zsh-hook
-    add-zsh-hook precmd _ssh_ensure_id_rsa
+    # 鍵の agent 投入は shell 起動時に自動化しない。投入した鍵が session 中に
+    # 消える根本原因が未特定で、起動時に何を投入しても使用時には空になりうる。
+    # ssh -A を使う直前に ssh-aa で投入するのが唯一確実な運用。
     # 手動再投入用 (新規 agent を起動しない macOS 安全版)
     alias ssh-aa='ssh-add --apple-use-keychain ~/.ssh/id_rsa'
 else
@@ -71,8 +56,6 @@ alias l='ls -1F'           # Show long file information
 alias ll='ls -lF'          # Long listing
 alias la='ls -AF'          # Show hidden files
 alias lc='ls -ltcr'        # Sort by and show change time, most recent last
-alias ld='ls -ld'          # Show info about the directory
-alias less="less -qnR"
 alias lk='ls -lShr'         # Sort by size, biggest last
 alias lla='ls -lAF'        # Show hidden all files
 
@@ -178,4 +161,4 @@ ${file_contents}"
 #
 # wtp (git worktree)
 #
-command -v wtp >/dev/null 2>&1 && eval "$(wtp shell-init zsh)"
+command -v wtp >/dev/null 2>&1 && cache_eval wtp wtp shell-init zsh

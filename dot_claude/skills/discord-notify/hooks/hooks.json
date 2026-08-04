@@ -1,0 +1,43 @@
+{
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/discord-notify.sh\" permission",
+            "timeout": 20,
+            "statusMessage": "Discord へ通知"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "idle_prompt|agent_needs_input",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/discord-notify.sh\" notification",
+            "timeout": 20,
+            "statusMessage": "Discord へ通知"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/discord-notify.sh\" stop",
+            "timeout": 20,
+            "statusMessage": "Discord へ通知"
+          }
+        ]
+      }
+    ]
+  }
+}

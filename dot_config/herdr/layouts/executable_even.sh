@@ -12,7 +12,7 @@
 # 木構造は splits[].rect + panes[].rect の包含関係で復元する。
 # path は false=first (左/上), true=second (右/下) の bool 列 (path=[] が root)。
 #
-# 起動経路: layout-menu.sh の "4 even" 項目。
+# 起動経路: layout-menu.sh の "1 even" 項目。
 #
 # ┌───┬─┬──┬───┐              ┌──┬──┬──┬──┬──┐
 # │ A │B│C │ D │  →           │A │B │C │D │E │
