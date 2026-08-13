@@ -2,7 +2,7 @@
 
 # cd on quit機能 - yaziで移動したディレクトリにシェルも移動
 function y() {
-    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+    local tmp="$(mktemp "${TMPDIR:-/tmp}/yazi-cwd.XXXXXX")" cwd
     command yazi "$@" --cwd-file="$tmp"
     if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
         builtin cd -- "$cwd"

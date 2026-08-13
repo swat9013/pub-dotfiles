@@ -118,6 +118,29 @@ alias ccs='claude --model sonnet'
 alias cch='claude --model haiku'
 alias ccid='claude --model sonnet --effort xhigh "/issue-dispatch"'  # 対話モードで /issue-dispatch を初期プロンプトに投入
 
+# Remote Control を有効にして起動。セッション名にリポジトリ名を付ける（先頭ドットは落とす）
+# Usage: ccr [claude options...]
+# Example: repo → myapp / その worktree → myapp-i3 / 非git → カレントディレクトリ名
+function ccr() {
+    local root name
+    root=$(git rev-parse --show-toplevel 2>/dev/null)
+
+    if [[ -z $root ]]; then
+        name=${PWD:t}
+    else
+        # --git-common-dir は linked worktree では main tree の .git（絶対）、main tree では ".git"（相対）
+        local common=$(git rev-parse --git-common-dir)
+        [[ $common == /* ]] || common="$root/$common"
+        local main=${${common:A:h}:t}
+
+        name=$main
+        [[ ${root:t} != "$main" ]] && name="$main-${root:t}"
+    fi
+
+    # --remote-control は値が省略可能なため、= 形式で名前を確実に束縛する
+    claude --remote-control="${name#.}" "$@"
+}
+
 # 軽量Claude Codeでワンライナー質問（ファイル参照オプション対応）
 # Usage: ccask "質問内容" [file1] [file2] ...
 # Example:
