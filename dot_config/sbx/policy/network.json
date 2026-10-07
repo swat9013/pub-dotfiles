@@ -1,0 +1,87 @@
+{
+  "description": "グローバル network policy の正本 (ADR 0021)。宛先の置き場は 1 規則で決める: 全 VM 共通はこの file、repo 固有は各 repo の .sandbox.yaml の allow (sandbox スコープ — sandbox-defaults.yaml には書けない)。group は整理上の分類で、live には 1 resource = 1 rule で入る (sbx v0.42.1 実測)。編集後は同階層の scripts/sync-network-policy.py で live policy へ収束させる (--check で drift 検査のみ)。sandbox スコープの rule と editable=false の rule (sbx 自身が管理) は対象外。",
+  "notes": {
+    "inventory": "resources は kit startup (gh release download: herdr) と repo の .sandbox.yaml init が入れうるツールチェーン (mise / uv 等)、運用導線 (git 還流・docker pull・apt) の棚卸し由来。既定 balanced の広いワイルドカード (**.googleapis.com / **.amazonaws.com / 非 Anthropic AI 各社) は落とした。2026-09-20 の再棚卸しで policy log 実測に合わせて絞った: anthropic-agent group (sbx が sandbox スコープで自動許可する 7 host — global 側の重複を撤去)、gitlab group (gitlab.com 利用 repo 無し。self-managed 同様、gitlab.com host の repo は自分の .sandbox.yaml で宣言する)、apt の archive/security/ubuntu.com (aarch64 VM の apt は ports.ubuntu.com のみを叩く)、docker.com 系 wildcard (実測消費者は download.docker.com だけ — 完全ドメインへ置換)",
+    "measured-gap": "宛先が足りない場合は VM の kit startup が fail する (fail-loudly) か `sbx policy log` に deny が残る。実測で見つけた宛先はこの正本へ追記して sync する — 場当たりの `sbx policy allow` を直接叩かない",
+    "unverified": "会社固有の宛先 (社内 GitLab / Atlassian / awscli の導入元) はここに書かない — 対象 repo の .sandbox.yaml が allow で宣言し、wrapper が sandbox スコープの rule として足す (ADR 0022)。本 file はグローバル policy の正本で公開対象"
+  },
+  "groups": {
+    "github": {
+      "decision": "allow",
+      "rationale": "kit startup の gh release download (herdr) と、init が release 経由で入れるツール (mise 等)、plugin marketplace の取得、git 還流 (push / fetch)、gh api、ghcr の OCI 参照。実測消費: api.github.com / release-assets・raw.githubusercontent.com",
+      "resources": [
+        "github.com:443",
+        "**.github.com:443",
+        "**.githubusercontent.com:443",
+        "ghcr.io:443"
+      ]
+    },
+    "mise-tools": {
+      "decision": "allow",
+      "rationale": "mise 経由のツール導入元 (旧 kits/dotfiles の startup で実測した宛先。ADR 0024 以降は repo の .sandbox.yaml init が mise を使うときの共通導入元として、repo 固有でない汎用ツールチェーンの基盤扱いでグローバルに残す)。registry 解決の主経路は GitHub releases (github group が担う)。npm: backend → npmjs、go core → dl.google.com、uv/python → astral.sh + pypi。会社向け CLI (acli / awscli) の導入元は work repo の .sandbox.yaml が宣言する",
+      "resources": [
+        "mise.run:443",
+        "mise-versions.jdx.dev:443",
+        "registry.npmjs.org:443",
+        "dl.google.com:443",
+        "astral.sh:443",
+        "pypi.org:443",
+        "files.pythonhosted.org:443"
+      ]
+    },
+    "docker-registry": {
+      "decision": "allow",
+      "rationale": "VM 内 docker daemon の image pull (Docker Hub の registry/auth とその CDN) と、kit startup の docker CE 導入元 (download.docker.com — policy log 実測 2026-09-20)。ghcr は github group。docker.com の website 系 wildcard は落とした",
+      "resources": [
+        "docker.io:443",
+        "**.docker.io:443",
+        "production.cloudflare.docker.com:443",
+        "download.docker.com:443"
+      ]
+    },
+    "ubuntu-apt": {
+      "decision": "allow",
+      "rationale": "VM (Ubuntu aarch64) の apt。policy log 実測 (2026-09-20) で叩くのは ports.ubuntu.com のみ (archive/security は x86 経路で不使用)。80 は apt の既定経路",
+      "resources": [
+        "ports.ubuntu.com:443",
+        "ports.ubuntu.com:80"
+      ]
+    },
+    "cert-validation": {
+      "decision": "allow",
+      "rationale": "TLS の OCSP / CRL / CA 配布。既定 balanced の default-cert-validation を据え置き (塞ぐと HTTPS 検証が壊れる)",
+      "resources": [
+        "**.lencr.org:80",
+        "**.lencr.org:443",
+        "ocsp.digicert.com:80",
+        "crl*.digicert.com:80",
+        "cacerts.digicert.com:80",
+        "*.one.digicert.com:80",
+        "*.one.au.digicert.com:80",
+        "*.one.ch.digicert.com:80",
+        "*.one.nl.digicert.com:80",
+        "*.one.digicert.co.jp:80",
+        "ocsp.sectigo.com:80",
+        "crl.sectigo.com:80",
+        "crt.sectigo.com:80",
+        "ocsp.comodoca.com:80",
+        "crl.comodoca.com:80",
+        "ocsp.usertrust.com:80",
+        "crl.usertrust.com:80",
+        "**.pki.goog:80",
+        "**.pki.goog:443",
+        "**.amazontrust.com:80",
+        "**.amazontrust.com:443",
+        "isrg.trustid.ocsp.identrust.com:80",
+        "**.pki.microsoft.com:80",
+        "**.pki.microsoft.com:443",
+        "crl.globalsign.com:80",
+        "crl.globalsign.net:80",
+        "ocsp.globalsign.com:80",
+        "ocsp.globalsign.com:443",
+        "ocsp2.globalsign.com:80",
+        "ocsp2.globalsign.com:443"
+      ]
+    }
+  }
+}

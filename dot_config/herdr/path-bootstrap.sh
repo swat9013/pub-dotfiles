@@ -9,9 +9,11 @@
 # 参照は BASH_SOURCE 相対 (../shell/) — XDG 未設定や apply 前の worktree/CI でも解決するため。
 . "$(dirname "${BASH_SOURCE[0]}")/../shell/path-prepend.sh"
 # 後に書いた dir ほど先頭に来る。herdr 本体が入る ~/.local/bin を最優先にする。
+# brew は mac = /opt/homebrew、Linux = linuxbrew prefix (ADR 0019)。mise shims は
+# runtime (言語処理系) の activate 前解決用に残す。
 path_prepend \
-	/home/linuxbrew/.linuxbrew/bin \
-	"$HOME/.linuxbrew/bin" \
 	/opt/homebrew/bin \
+	/home/linuxbrew/.linuxbrew/bin \
+	"$HOME/.local/share/mise/shims" \
 	"$HOME/.local/bin"
 export PATH

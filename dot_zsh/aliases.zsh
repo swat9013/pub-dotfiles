@@ -118,10 +118,9 @@ alias ccs='claude --model sonnet'
 alias cch='claude --model haiku'
 alias ccid='claude --model sonnet --effort xhigh "/issue-dispatch"'  # 対話モードで /issue-dispatch を初期プロンプトに投入
 
-# Remote Control を有効にして起動。セッション名にリポジトリ名を付ける（先頭ドットは落とす）
-# Usage: ccr [claude options...]
+# Remote Control のセッション名を cwd から組み立てて標準出力へ返す（先頭ドットは落とす）
 # Example: repo → myapp / その worktree → myapp-i3 / 非git → カレントディレクトリ名
-function ccr() {
+_cc_session_name() {
     local root name
     root=$(git rev-parse --show-toplevel 2>/dev/null)
 
@@ -137,8 +136,49 @@ function ccr() {
         [[ ${root:t} != "$main" ]] && name="$main-${root:t}"
     fi
 
+    print -r -- "${name#.}"
+}
+
+# Remote Control を有効にして起動。セッション名にリポジトリ名を付ける
+# Usage: ccr [claude options...]
+function ccr() {
     # --remote-control は値が省略可能なため、= 形式で名前を確実に束縛する
-    claude --remote-control="${name#.}" "$@"
+    claude --remote-control="$(_cc_session_name)" "$@"
+}
+
+# dispatch の orchestrator を cwd = project の anchor repo で起こす（swat-skills の起動規約に対応）
+# Usage: cc-orc [max]   max = 同時稼働 worker 数の上限（省略時は skill 側の既定 3）
+# model / effort は下の claude 行で固定
+# Remote Control のセッション名は <repo>-orchestrator（claude.ai の一覧で project を判別するため）。
+# agent 名は orchestrator で固定（project に 1 体・固定名の役職名で、worker からの宛先になる）
+function cc-orc() {
+    # herdr の外でも claude は起動するが dispatch-ops の前提検査に落ちるので先に切る
+    if [[ $HERDR_ENV != 1 ]]; then
+        print -u2 "cc-orc: herdr session の外です。herdr session 内で実行してください"
+        return 1
+    fi
+    # anchor は起動時の cwd（規約の正本は swat-skills README）。誤った cwd は別 project の
+    # durable 台帳を無言で新設するため、repo root であることだけ検査する（どの repo が
+    # 正しい anchor かは関数には判定できず、規約どおり起動者の責任に残す）
+    if [[ "$(git rev-parse --show-toplevel 2>/dev/null)" != "${PWD:A}" ]]; then
+        print -u2 "cc-orc: cwd が git repo の root ではありません。project の anchor repo 直下で実行してください"
+        return 1
+    fi
+
+    # 受け取るのは max だけ。余剰引数を黙って捨てず、prompt へ紛れ込ませもしない
+    if (( $# > 1 )); then
+        print -u2 "cc-orc: 引数は max のみです（claude の option は渡せません）"
+        return 1
+    fi
+
+    # `prompt` は zsh の PS1 と束ねられた特殊変数なので local に取らない
+    local initial_prompt="/swat-skills:orchestrator"
+    (( $# )) && initial_prompt+=" $1"
+
+    # opus は常駐中の指示追従の忠実さ（規約と罠の表を崩さない）を買うため。
+    # effort が medium なのは worker の質問中継が turn の大半で、粘りより応答性が効くから
+    claude --model opus --effort medium \
+        --remote-control="$(_cc_session_name)-orchestrator" --name orchestrator "$initial_prompt"
 }
 
 # 軽量Claude Codeでワンライナー質問（ファイル参照オプション対応）
@@ -180,8 +220,3 @@ ${file_contents}"
 
     claude --model haiku -p "$prompt"
 }
-
-#
-# wtp (git worktree)
-#
-command -v wtp >/dev/null 2>&1 && cache_eval wtp wtp shell-init zsh

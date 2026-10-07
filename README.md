@@ -11,7 +11,7 @@ chezmoi init --apply https://github.com/swat9013/pub-dotfiles.git
 
 ## apply 時に走るもの
 
-`run_*` script は `chezmoi apply` の一部として自動実行される。実行させたくない場合は `--exclude=scripts` を付ける (`chezmoi init --apply --exclude=scripts` / `chezmoi apply --exclude=scripts`)。`.chezmoiignore` では抑止できない。
+`run_*` script は `chezmoi apply` の一部として自動実行される。実行させたくない場合は `--exclude=scripts` を付ける (`chezmoi init --apply --exclude=scripts` / `chezmoi apply --exclude=scripts`)。個別に抑止するなら `.chezmoiignore` に attribute と `.tmpl` を剥いだ target 名 (例: `byte-compile-emacs.sh`) を書く (source 名のままではマッチしない)。
 
 | script | 動作 | 条件 |
 |---|---|---|
@@ -25,10 +25,10 @@ brew bundle --global
 
 ## 別途インストールが要るもの
 
-`.claude/settings.json` の SessionStart hook は `~/.claude/hooks/herdr-agent-state.sh` を呼ぶ。この hook 本体は本リポジトリに含まれない ([herdr](https://herdr.dev) が生成するため)。
+`~/.claude/settings.json` は `.claude/modify_settings.json.tmpl` が `settings.base.json` を元に生成する。[herdr](https://herdr.dev) や [Orca](https://www.onorca.dev/) が `~/.claude/settings.json` に書き込む hook 登録は、`chezmoi apply` 後もそのまま残る。
 
-- herdr を使うなら `herdr integration install claude` で hook を配置する
-- 使わないなら何もしなくてよい。hook は存在チェック付きで呼ばれるので、未導入環境では何も起きない
+- herdr を使うなら `herdr integration install claude`、Orca を使うなら Settings → Agents → Agent status hooks を on にする。どちらも hook の script と `settings.json` への登録を自分で書く
+- 使わないなら何もしなくてよい
 
 ## `.local` による拡張
 

@@ -14,31 +14,40 @@ errors=()
 
 run_step() {
   # $1: ステップ名 (失敗時の errors エントリ), $2..: 実行コマンド
+  # コマンドの成否をそのまま返すので、後続ステップの実行可否を呼び出し側で分岐できる。
   local name="$1"
   shift
   echo "=== ${name} ==="
-  if ! "$@"; then
-    errors+=("${name}")
+  if "$@"; then
+    return 0
   fi
+  errors+=("${name}")
+  return 1
 }
 
 # --- 更新群 ---
 
-# brew bundle 直前に Brewfile 宣言の全 tap を trust する。Homebrew 6.0+ は
-# HOMEBREW_REQUIRE_TAP_TRUST がデフォルト set のため、trust 未登録の third-party
-# tap は formula 読込で拒否され brew bundle が失敗する。chezmoi 側の brew bundle は
-# Brewfile の sha256 が変わるまで再実行されないので、trust.json が消えると
-# routine update が永続的に失敗する。idempotent なため毎回実行しても安価。
-echo "=== brew trust (Brewfile taps) ==="
-if [[ -f "${HOME}/.Brewfile" ]]; then
-  while read -r tap; do
-    brew trust "${tap}" || echo "WARN: brew trust ${tap} failed (続行)"
-  done < <(sed -nE 's/^[[:space:]]*tap "([^"]+)".*/\1/p' "${HOME}/.Brewfile")
+# trust の正本は Brewfile の `trusted: true` 宣言 (ADR 0019 §3、Homebrew 6.0+)。
+# install / cleanup とも entry 読込前に宣言を trust store へ適用するため、
+# 事前の brew trust step (brew-trust-taps.sh) は廃止した。
+#
+# install と cleanup は別ステップとして報告する。--force-cleanup で一括実行すると
+# unlisted の uninstall・trust store の書き換え・末尾の `brew cleanup` の失敗が
+# すべて "brew bundle" 名義になり、install 本体が成功していても
+# 「brew bundle が失敗」と通知される (実測で untrusted tap / uninstall 拒否 /
+# tap clone 破損 / cleanup の非ゼロ終了の 4 種が同じ名前で報告されてきた)。
+#
+# なお cleanup は末尾で無条件に `brew cleanup` を呼ぶ (抑止 flag は無い)。後段の
+# "brew cleanup" ステップと重複するうえ、Homebrew 側が stderr を捨てるためここでの
+# 失敗は原因不明のまま非ゼロで返る。ステップ名を分けて切り分け可能にする。
+#
+# install 失敗時に cleanup を走らせないのは --force-cleanup と同じ順序 (install が
+# 非ゼロなら Homebrew は cleanup へ進まない) を保つため。
+if run_step "brew bundle" brew bundle install --global; then
+  run_step "brew bundle cleanup" brew bundle cleanup --global --force
 else
-  echo "SKIP: ~/.Brewfile not found"
+  echo "SKIP: brew bundle install が失敗したため cleanup をスキップ"
 fi
-
-run_step "brew bundle" brew bundle install --global --force-cleanup
 
 echo "=== uv tool upgrade ==="
 if command -v uv &>/dev/null; then
@@ -47,6 +56,17 @@ if command -v uv &>/dev/null; then
   fi
 else
   echo "SKIP: uv command not found"
+fi
+
+# mise は runtime (言語処理系) の版管理専任 (ADR 0019)。宣言追加を反映する install →
+# 導入済みの更新 (plugin update / upgrade) の順で流す。
+echo "=== mise install ==="
+if command -v mise &>/dev/null; then
+  if ! mise install --yes; then
+    errors+=("mise install")
+  fi
+else
+  echo "SKIP: mise command not found"
 fi
 
 echo "=== mise plugin update ==="

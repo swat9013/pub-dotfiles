@@ -1,0 +1,34 @@
+# sandbox VM の default 設定 (汎用)。~/.config/sbx/sandbox-user.yaml (個人) と repo root の
+# .sandbox.yaml (repo 固有) がこの上に merge され、wrapper (sbx-repo.sh) が VM へ適用する。
+# key 別の merge 規則は scripts/sandbox-config.py の docstring を参照。
+
+# agent runtime profile: VM 内 ~/.claude/settings.json へ merge される key だけを持つ
+profile:
+  model: opus
+  effortLevel: medium
+  # worker VM は非対話なので、対話補助と背景のモデル呼び出しは待ち時間を増やすだけ。まとめて切る
+  awaySummaryEnabled: false      # 5 分以上離席後に出る session recap の生成
+  autoMemoryEnabled: false       # auto-memory directory の毎ターン read/write
+  autoDreamEnabled: false        # background の memory consolidation (auto-dream)
+  promptSuggestionEnabled: false # 入力欄の prompt 候補生成 (非対話の worker には無用)
+  spinnerTipsEnabled: false      # spinner の tips 表示
+  feedbackDrafts: "off"          # SendFeedback tool ごと外す (下書き生成をしない)
+  env:
+    CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: "60"
+    CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR: "1"
+    CLAUDE_CODE_ENABLE_TODO_TOOLS: "1"
+    DISABLE_ERROR_REPORTING: "1"
+  # VM の Claude Code は marketplace を 1 つも持たない状態で起動するため、plugin install の前提と
+  # なる official marketplace をここで明示宣言する。個人 marketplace / plugin は sandbox-user.yaml に書く
+  extraKnownMarketplaces:
+    claude-plugins-official:
+      source:
+        source: github
+        repo: anthropics/claude-plugins-official
+
+# 宛先 (egress) はこの file には書けない (sandbox-config.py が error にする)。置き場の判定は 1 規則:
+#   repo 固有の宛先   → 各 repo の .sandbox.yaml の allow (sandbox スコープ。create 時注入・rm で回収)
+#   全 VM 共通の宛先  → policy/network.json (global 正本)
+
+# 共通 init (VM 内で repo root を cwd に実行)。現状は無し
+init: []

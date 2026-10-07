@@ -30,6 +30,14 @@ startup_defer() {
     fi
 }
 
+# PATH の順序は共有 primitive に集約する (正本: ~/.config/shell/path-layout.sh)。
+# /etc/zprofile の path_helper が /opt/homebrew/bin を後ろへ回した順序を毎回先頭へ復旧する
+# (これがないと git が Apple Git に解決され _git 補完が失敗する)。
+# .zshrc は対話 shell でしか読まれないため、非対話 login shell 向けに .zlogin も同じものを読む。
+# cache_eval の消費側より前に置く: starship / sheldon など起動中に解決が要る CLI は
+# mise 管理 (ADR 0016) へ移り、その解決は path-layout が足す mise shims に依存する。
+. "${XDG_CONFIG_HOME:-$HOME/.config}/shell/path-layout.sh"
+
 # sheldon: plugin 定義（plugins.toml）を変えたときも再生成が要るので -d で足す。
 cache_eval sheldon -d "${XDG_CONFIG_HOME:-$HOME/.config}/sheldon/plugins.toml" sheldon source
 
@@ -39,17 +47,9 @@ for conf in $HOME/.zsh/*.zsh; do
     source ${conf};
 done
 
-# PATH の順序は共有 primitive に集約する (正本: ~/.config/shell/path-layout.sh)。
-# /etc/zprofile の path_helper が /opt/homebrew/bin を後ろへ回した順序を毎回先頭へ復旧する
-# (これがないと git が Apple Git に解決され _git 補完が失敗する)。
-# .zshrc は対話 shell でしか読まれないため、非対話 login shell 向けに .zlogin も同じものを読む。
-. "${XDG_CONFIG_HOME:-$HOME/.config}/shell/path-layout.sh"
-
 if [[ -f "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
    source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
 fi
-
-if command -v wt >/dev/null 2>&1; then cache_eval wt wt config shell init zsh; fi
 
 # machine-local な上書き用。最後に読むことで、ここまでの設定を上書きできる。
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

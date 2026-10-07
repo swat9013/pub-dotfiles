@@ -6,7 +6,7 @@ if which fzf > /dev/null 2>&1; then
     function fzf-select-history() {
         BUFFER=$(\history -n 1 | \
             awk '{ lines[NR]=$0 } END { for (i=NR; i>=1; i--) if (!seen[lines[i]]++) print lines[i] }' | \
-            fzf --no-sort --scheme=history --query "$LBUFFER")
+            fzf --scheme=history --bind='ctrl-r:toggle-sort' --query "$LBUFFER")
         CURSOR=$#BUFFER
         zle reset-prompt
     }

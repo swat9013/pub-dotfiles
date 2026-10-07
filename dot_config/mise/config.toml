@@ -1,5 +1,10 @@
 [settings]
 python.github_attestations = false
 
+# runtime version manager の global 既定 (ADR 0019)。ここに置くのは
+# 「per-project で版を切り替えたい言語処理系」だけで、版は各 repo の .mise.toml が
+# 上書きする。package (CLI / GUI / fonts 等) の正本は dot_Brewfile — ADR 0016 の
+# 「cross-platform CLI の導入正本 = mise」は ADR 0019 で撤回済み。
 [tools]
-"npm:opensrc" = "latest"
+bun = "latest"
+go = "latest"

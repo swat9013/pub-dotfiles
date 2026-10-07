@@ -1,0 +1,3 @@
+# settings.base.json は modify_settings.json.tmpl が include する正本で、それ自体は
+# ~/.claude/ に置かない (ADR 0020)。target 名で書く (dot_ prefix 無し)。
+settings.base.json

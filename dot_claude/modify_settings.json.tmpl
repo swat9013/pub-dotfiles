@@ -1,0 +1,52 @@
+#!/bin/sh
+# ~/.claude/settings.json を「repo 正本 + 外部 tool が書いた managed hook」に合成する
+# (ADR 0020)。chezmoi が現在の target 内容を stdin で渡し、stdout を新内容として書く。
+#
+# 外部 tool は ~/.claude/settings.json 固定で自分の hook を書き、command 文字列で
+# 自分の持ち物を識別して冪等に管理する:
+#   - Orca (stablyai/orca): `.orca/agent-hooks/claude-hook` を含む定義。
+#     「全削除 → 各 event 配列の末尾に 1 件追加」
+#   - herdr (herdrdev/herdr): `bash '<abs path>/.claude/hooks/herdr-agent-state.sh' session`
+#     の完全一致。SessionStart に無ければ追加、あれば触らない
+# ここは managed だけ抽出して正本の配列の末尾へ結合するので、apply と各 tool の
+# install のどちらを何度走らせても byte 一致に収束する。
+# 正本は同 dir の settings.base.json (.chezmoiignore で配布対象外)。
+#
+# 保存するのは上記 managed hook だけ。Claude Code が実行時に追記する permission 等は
+# 従来 (chezmoi update --force) と同じく正本で上書きする。残す要素を増やすときは
+# MANAGED_PATTERN に足す。
+set -eu
+
+current=$(cat)
+[ -n "$current" ] || current='{}'
+
+desired=$(cat <<'BASE_JSON'
+{{ include "dot_claude/settings.base.json" -}}
+BASE_JSON
+)
+
+# jq 不在 (remote 初回など) や現在 file が壊れた JSON のときは合成せず正本を
+# そのまま出す。apply を失敗させない (auto-update は背景で走り失敗が見えないため)
+if ! command -v jq >/dev/null 2>&1; then
+	printf '%s\n' "$desired"
+	exit 0
+fi
+
+# 外部 tool の managed hook を command 文字列で識別する正規表現 (jq test)。
+# herdr は自分が書く完全な形だけに絞る (旧 ADR 0013 の guard 付き command を
+# managed と誤認して残さないため)
+MANAGED_PATTERN="\\.orca/agent-hooks/claude-hook|^bash '[^']*/\\.claude/hooks/herdr-agent-state\\.sh' session$"
+
+if merged=$(printf '%s' "$current" | jq --arg pat "$MANAGED_PATTERN" --argjson desired "$desired" '
+  def managed:
+    (.hooks? // []) | any((.command? // "") | test($pat));
+  ((.hooks? // {}) | with_entries(.value |= (if type == "array" then map(select(managed)) else [] end))
+                   | with_entries(select(.value | length > 0))) as $ext
+  | $desired
+  | .hooks = ((.hooks // {}) as $base
+      | $base + ($ext | with_entries(.value = (($base[.key] // []) + .value))))
+' 2>/dev/null); then
+	printf '%s\n' "$merged"
+else
+	printf '%s\n' "$desired"
+fi

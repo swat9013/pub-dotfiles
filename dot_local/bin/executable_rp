@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 今いる repo の issue / CL を fzf で選んでブラウザで開く。origin が github.com なら gh、それ以外は glab を使う。
+
+usage() {
+  cat >&2 <<'EOF'
+usage: rp <command>
+  issue-list   open な issue を fzf で選び、ブラウザで開く
+  issue-open   issue 一覧ページをブラウザで開く
+  cl-list      open な CL を fzf で選び、ブラウザで開く
+  cl-open      今いるブランチの CL をブラウザで開く
+EOF
+  exit 1
+}
+
+detect_cli() {
+  local url
+  url=$(git remote get-url origin 2>/dev/null) || { echo "rp: git repo の外、または origin がありません" >&2; exit 1; }
+  case "$url" in
+    *github.com[:/]*) echo gh ;;
+    *) echo glab ;;
+  esac
+}
+
+# 1 行 = "<番号>\t#<番号>  [draft] <タイトル>  [<label>, ...]  @<author>"。1 列目は open 用で表示しない。
+# gh / glab で形の違う JSON を {n, title, draft, labels, author} に揃えてから整形する
+FORMAT='"\(.n)\t#\(.n)  \(if .draft then "[draft] " else "" end)\(.title)\(if (.labels | length) > 0 then "  [\(.labels | join(", "))]" else "" end)  @\(.author)"'
+
+list_items() {
+  local cli=$1 kind=$2
+  case "$cli:$kind" in
+    gh:issue) gh issue list --limit 100 --json number,title,author,labels \
+      --jq ".[] | {n: .number, title, draft: false, labels: [.labels[].name], author: .author.login} | $FORMAT" ;;
+    gh:pr) gh pr list --limit 100 --json number,title,author,labels,isDraft \
+      --jq ".[] | {n: .number, title, draft: .isDraft, labels: [.labels[].name], author: .author.login} | $FORMAT" ;;
+    glab:issue) glab issue list --per-page 100 --output json \
+      | jq -r ".[] | {n: .iid, title, draft: false, labels, author: .author.username} | $FORMAT" ;;
+    glab:mr) glab mr list --per-page 100 --output json \
+      | jq -r ".[] | {n: .iid, title, draft, labels, author: .author.username} | $FORMAT" ;;
+  esac
+}
+
+pick_and_open() {
+  local cli=$1 kind=$2 label=$3 items selected
+  items=$(list_items "$cli" "$kind")
+  selected=$(printf '%s' "$items" | fzf --delimiter='\t' --with-nth=2 --prompt="$label> ") || return 0
+  [[ -n $selected ]] && "$cli" "$kind" view "${selected%%$'\t'*}" --web
+}
+
+# glab issue list には --web が無いので、repo の URL から issues ページを組み立てる
+open_issue_page() {
+  case "$1" in
+    gh) gh issue list --web ;;
+    glab) open "$(glab repo view --output json --jq .web_url)/-/issues" ;;
+  esac
+}
+
+case "${1:-}" in
+  issue-list | issue-open | cl-list | cl-open) ;;
+  *) usage ;;
+esac
+
+cli=$(detect_cli)
+cl_kind="pr"
+[[ $cli == glab ]] && cl_kind="mr"
+
+case "$1" in
+  issue-list) pick_and_open "$cli" issue issue ;;
+  issue-open) open_issue_page "$cli" ;;
+  cl-list) pick_and_open "$cli" "$cl_kind" CL ;;
+  cl-open) "$cli" "$cl_kind" view --web ;;
+esac

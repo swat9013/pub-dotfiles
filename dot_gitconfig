@@ -68,7 +68,6 @@
   lmr-with-hash = "log --reverse --pretty=format:'- %C(reset)%h%C(reset) %s%C(auto)%n%w(0,2,2)%b%-'"
   cmfix = '!f() { git commit --fixup=$1 && git rebase -i --autosquash $1^; }; f'
 	open = "!f() { url=$(git remote get-url ${1:-origin} | sed -e \"s|git@|https://|\" -e \"s|:|/|2\" -e \"s|\\.git$||\"); open \"$url\"; }; f"
-	mr = "!f() { branch=$(git rev-parse --abbrev-ref HEAD); url=$(git remote get-url ${1:-origin} | sed -e \"s|git@|https://|\" -e \"s|:|/|2\" -e \"s|\\.git$||\"); open \"$url/-/merge_requests?scope=all&state=opened&source_branch=$branch\"; }; f"
 	update = "!git add -A && git commit -m \"update $(date +%Y-%m-%d)\" && git push"
 [init]
 	defaultBranch = main

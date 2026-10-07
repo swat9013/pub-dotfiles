@@ -28,6 +28,7 @@ if [ "$(uname)" = 'Darwin' ]; then
     fi
 elif [ "$(expr substr $(uname -s) 1 5)" = 'Linux' ]; then
     export PATH=$HOME/.emacsenv/bin:$PATH
+    # package manager は Linux でも brew (ADR 0019。ADR 0016 の linuxbrew 撤去を巻き戻し)
     if [ -e /home/linuxbrew/.linuxbrew/bin/brew ]; then
         cache_eval brew-shellenv /home/linuxbrew/.linuxbrew/bin/brew shellenv zsh
     fi

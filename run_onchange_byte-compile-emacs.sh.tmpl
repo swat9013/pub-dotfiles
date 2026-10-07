@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# hash: {{ include "dot_emacs.d/init.el" | sha256sum }}{{ include "dot_emacs.d/early-init.el" | sha256sum }}{{ range (glob "dot_emacs.d/lisp/*.el") }}{{ include . | sha256sum }}{{ end }}
+# hash: {{ output "bash" "-c" "command -v emacs >/dev/null 2>&1 && emacs --version | head -1 || echo none" | trim }}{{ include "dot_emacs.d/init.el" | sha256sum }}{{ include "dot_emacs.d/early-init.el" | sha256sum }}{{ range (glob "dot_emacs.d/lisp/*.el") }}{{ include . | sha256sum }}{{ end }}
 #
 # run_onchange_byte-compile-emacs.sh.tmpl — Emacs elisp を chezmoi apply 後に
-# batch byte-compile する。source 側の .el (init.el / early-init.el / lisp/*.el)
-# のいずれかが変化するたびに hash template が別値になり、chezmoi が本 script を
-# 再実行する。emacs / lisp ディレクトリ / straight bootstrap が揃わないホストでは
-# 何もせず終了する。
+# byte-compile し、native-comp ビルドなら .eln も AOT 生成する。source 側の .el
+# (init.el / early-init.el / lisp/*.el) のいずれか、または emacs 本体のバージョンが
+# 変化するたびに hash template が別値になり、chezmoi が本 script を再実行する。
+# emacs / lisp ディレクトリ / straight bootstrap が揃わないホストでは何もせず終了する。
+#
+# emacs バージョンを hash に含める理由: 別バージョンで作られた成果物 (.elc / .eln) は
+# 中身が現行 emacs と食い違いうるが、.el が変わらない限り再 compile が走らないため、
+# バージョン変更が stale な成果物を温存してしまう。`|| echo none` は emacs 未導入の
+# ホストで chezmoi apply 自体を落とさないためのフォールバック。`| trim` は必須で、
+# `output` が返す trailing newline をそのまま埋めると hash コメントが 2 行に割れ、
+# 後続の sha256 が「コマンド」として実行されてしまう。
 set -euo pipefail
 
 # emacs が入っていないホスト (最小構成の Linux server 等) では黙って skip する。
@@ -44,10 +51,33 @@ output=$(emacs --batch -Q -L lisp -l init.el -f batch-byte-compile lisp/*.el ini
 }
 echo "$output"
 
-# use-package が form を parse できず設定を silent に破棄した場合、
-# emacs は exit 0 のまま "Failed to parse package" を出力するだけなので、
-# ここで検知して loud に失敗させる。
-if grep -q "Failed to parse package" <<<"$output"; then
-  echo "ERROR: use-package form の parse に失敗し、設定が .elc から欠落しています。" >&2
+# use-package が form を parse できず設定を silent に破棄した場合、emacs は exit 0 の
+# まま "Failed to parse package" を出力するだけ。
+#
+# さらに use-package macro 自体が compile 環境に居ないと、byte compiler は
+# `(use-package foo ...)` を「関数呼び出し」として warning 付きで compile し、これも
+# **exit 0 で終わる**。この .elc / .eln を load すると引数の `foo` が変数評価されて
+# `void-variable foo` になり init が中断する。後者は warning でしか現れないので、
+# 両方の文言を見て loud に失敗させる。
+if grep -qE "Failed to parse package|the function .use-package. is not known to be defined" <<<"$output"; then
+  echo "ERROR: use-package form が展開されないまま .elc に焼かれています" >&2
+  echo "       (compile 環境に use-package macro が居ない / form が parse できない)。" >&2
   exit 1
+fi
+
+# 上は今回の compile 出力に対する検査。成果物そのものにも未展開の痕跡が残っていないか
+# を独立に見る (warning を出さずに壊れた .elc が残った場合の保険)。
+if grep -aq ":straight" init.elc early-init.elc lisp/*.elc; then
+  echo "ERROR: 展開されなかった :straight keyword が .elc に残っています。" >&2
+  exit 1
+fi
+
+# native-comp ビルドでは .eln が .elc より優先して load される。遅延コンパイルの
+# worker は .el を素の環境で読むため use-package を展開できず、上と同じ壊れ方の
+# .eln を作る。early-init.el が該当ファイルを遅延コンパイルの deny-list に入れて
+# いるので、ここで use-package をロード済みのプロセス内から AOT 生成する。
+# in-process の native-compile は eln-cache 配下に直接書き出す。
+if emacs --batch -Q --eval '(kill-emacs (if (and (fboundp (quote native-comp-available-p)) (native-comp-available-p)) 0 1))'; then
+  emacs --batch -Q -L lisp -l init.el \
+    --eval '(mapc (function native-compile) (append (file-expand-wildcards "lisp/*.el") (list "init.el" "early-init.el")))'
 fi

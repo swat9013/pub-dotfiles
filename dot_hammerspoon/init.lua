@@ -1,6 +1,6 @@
 -- ~/.hammerspoon/init.lua
 -- 管理: chezmoi source = dot_hammerspoon/init.lua
--- 役割: hotkey → アクション、外部ディスプレイ接続/切断時の自動処理、ログイン時ジョブ。
+-- 役割: hotkey → アクション、外部ディスプレイ接続/切断時の自動処理、ログイン時ジョブ、朝の URL。
 -- 修飾キーの物理リマップ (caps→ctrl, cmd↔opt 入替, 日本語キー変換) は Karabiner が担当する。
 
 local home = os.getenv("HOME")
@@ -13,6 +13,8 @@ local launchApps = {
   ["3"] = "Slack",
   ["4"] = "Todoist",
   ["5"] = "Ghostty",
+  ["6"] = "Claude",
+  ["9"] = "Orca",
   ["0"] = "Finder",
 }
 for key, appName in pairs(launchApps) do
@@ -26,7 +28,6 @@ end
 local focusApps = {
   ["7"] = "com.amazon.Lassen",     -- Amazon Kindle
   ["8"] = "com.microsoft.VSCode",  -- Visual Studio Code
-  ["9"] = "dev.zed.Zed",           -- Zed
 }
 local function focusIfRunning(bundleID)
   local app = hs.application.get(bundleID)
@@ -84,6 +85,47 @@ if hs.fs.attributes(pluginUpdateScript)
   hs.settings.set(pluginUpdatePidKey, hs.processInfo.processID)
   os.execute("nohup '" .. pluginUpdateScript .. "'"
     .. " >> '" .. home .. "/Library/Logs/plugin-update.log' 2>&1 &")
+end
+
+-- 朝の URL: 指定曜日の指定時間帯に、その日初めて PC を開いたとき (ログイン / スリープ復帰 / 画面ロック解除)
+-- URL を既定ブラウザで開く。設定は非公開の local.lua (未配置なら機能ごと無効):
+--   return { morningURL = { url = "https://...", from = "05:00", to = "09:30",
+--                           weekdays = {2, 3, 4, 5, 6} } }  -- os.date の wday (1=日)
+-- 同日 2 回目以降は開かない (最終実行日を hs.settings に永続化)。
+local localOk, localConfig = pcall(dofile, home .. "/.hammerspoon/local.lua")
+local morningURL = localOk and type(localConfig) == "table" and localConfig.morningURL or nil
+local function toMinutes(hhmm)
+  local h, m = hhmm:match("^(%d+):(%d+)$")
+  return tonumber(h) * 60 + tonumber(m)
+end
+local function openMorningURL()
+  local now = os.date("*t")
+  local today = os.date("%Y-%m-%d")
+  if hs.settings.get("morningURL.lastDate") == today then return end
+  local isTargetDay = false
+  for _, wday in ipairs(morningURL.weekdays or {2, 3, 4, 5, 6}) do
+    if wday == now.wday then isTargetDay = true; break end
+  end
+  if not isTargetDay then return end
+  local minutes = now.hour * 60 + now.min
+  if minutes < toMinutes(morningURL.from) or minutes >= toMinutes(morningURL.to) then return end
+  hs.settings.set("morningURL.lastDate", today)
+  hs.urlevent.openURL(morningURL.url)
+end
+if morningURL then
+  -- ログイン判定は plugin-update と同じく HS プロセスの PID の変化で行う (リロードでは発火しない)
+  if hs.settings.get("morningURL.lastPid") ~= hs.processInfo.processID then
+    hs.settings.set("morningURL.lastPid", hs.processInfo.processID)
+    openMorningURL()
+  end
+  -- watcher は GC 回避のためグローバルに保持する
+  morningURLWatcher = hs.caffeinate.watcher.new(function(event)
+    if event == hs.caffeinate.watcher.systemDidWake
+      or event == hs.caffeinate.watcher.screensDidUnlock then
+      openMorningURL()
+    end
+  end)
+  morningURLWatcher:start()
 end
 
 -- 設定の自動リロード (開発ループ)。watcher は GC 回避のためグローバルに保持する。

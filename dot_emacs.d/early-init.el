@@ -32,11 +32,32 @@
 ;; ============================================================
 ;; early-init の compile 時点では comp.el 未ロードで defcustom が存在しないため
 ;; 宣言のみ置く (実体は native-comp ビルドの runtime で定義される)。
+;; deny-list 側の変数は quote した symbol 越しにしか触らないので defvar は不要
+;; (free variable warning は出ない)。
 (defvar native-comp-async-report-warnings-errors)
 
 (when (featurep 'native-compile)
   ;; 警告を抑制
   (setq native-comp-async-report-warnings-errors 'silent)
+
+  ;; 自分の設定ファイルを遅延 native-compile の対象から外す。
+  ;; 遅延コンパイルの worker は .el を素の環境で読むため、straight 経由で
+  ;; 実行時に読み込まれる use-package macro を知らない。その結果
+  ;; `(use-package foo ...)` が展開されずに関数呼び出しとして .eln に焼かれ、
+  ;; load 時に .elc を差し置いて使われて `void-variable foo` で init が中断する。
+  ;; .eln は run_onchange_byte-compile-emacs.sh が use-package をロード済みの
+  ;; プロセス内で AOT 生成するので、遅延コンパイルは不要。
+  ;; deny-list は comp.el の defcustom で、early-init の時点では未ロード = 未 bound。
+  ;; defcustom は既に値のある変数を上書きしないので、先に set しておけば効く
+  ;; (boundp で gate すると常に false になり、設定が丸ごと無視される)。
+  ;; 判定対象の file 名は .el のことも .elc のこともあるため両方に当てる。
+  (let ((deny (format "\\`%s\\(early-init\\|init\\|lisp/init-[^/]*\\)\\.elc?\\'"
+                      (regexp-quote (expand-file-name user-emacs-directory))))
+        ;; Emacs 29 で native-comp-deferred-compilation-deny-list から改名された。
+        (var (if (>= emacs-major-version 29)
+                 'native-comp-jit-compilation-deny-list
+               'native-comp-deferred-compilation-deny-list)))
+    (set var (cons deny (and (boundp var) (symbol-value var)))))
 
   ;; ネイティブコンパイルキャッシュの場所
   (when (fboundp 'startup-redirect-eln-cache)

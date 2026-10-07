@@ -17,6 +17,13 @@
 # -d は binary 以外の無効化条件を足す (sheldon の plugins.toml のような設定 file)。
 # name は cache file 名になるため `/` を含められない。
 #
+# 適用条件: **呼び出した shell の環境を絶対値で出力に埋め込む生成元は cache できない**。
+# file に凍結した瞬間、生成時の環境が後続の全 shell で再生される。mise 2026.9.4 の
+# `mise activate zsh` は `export PATH='<生成時の PATH>'` を吐くため、path-layout 前に
+# 生成された cache が以後の全 shell から ~/.local/bin を消した。`brew shellenv` の
+# `export PATH="...${PATH+:$PATH}"` のように呼び出し時の値を動的に参照する出力なら安全。
+# 新しい適用先を足すときは、無効化条件の前にまず出力を目視してどちらかを判定する。
+#
 # 生成物の検証は「exit status が 0」「stdout が非空」の 2 点まで。shell 文法の妥当性までは
 # 見ない (portable に検証できない)。exit 0 で壊れた code を出す tool は上流のバグで、
 # source 時に毎起動 error が出る形になる — 無音にはならないのでそこで止める。
@@ -32,7 +39,7 @@
 #
 # 関数内 source では $@ と $funcstack も cache_eval のものになる。clap 系の completion は
 # top-level で `[ "$funcstack[1]" = _foo ]` を見て自己実行と compdef 登録を切り替えるが、
-# 適用先 (herdr / wt / wtp) では compdef 側に落ちて _comps への登録が成立することを実機で
+# 適用先 (herdr 等) では compdef 側に落ちて _comps への登録が成立することを実機で
 # 確認済み。新しい適用先を足すときは compdef / 関数定義が生きているかを確かめる。
 
 # 生成元 binary を PATH 上で解決し _cache_eval_bin へ入れる。呼び出し側の local に
