@@ -18,6 +18,7 @@
     "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1",
     "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
     "DISABLE_ERROR_REPORTING": "1"
   },
   "extraKnownMarketplaces": {
@@ -140,9 +141,6 @@
       "Bash(uv tree:*)",
       "Bash(uvx ruff:*)",
       "Bash(wc:*)",
-      "Bash(wt --version:*)",
-      "Bash(wt config show:*)",
-      "Bash(wt list:*)",
       "Bash(xattr:*)",
       "Bash(yarn run:*)",
       "Bash(yarn test:*)",
@@ -200,9 +198,6 @@
       "Bash(git -C * push --force*)",
       "Bash(git -C * push --mirror*)",
       "Bash(git -C * push -f*)",
-      "Bash(git checkout --:*)",
-      "Bash(git clean --force:*)",
-      "Bash(git clean -f:*)",
       "Bash(git push --delete:*)",
       "Bash(git push --force:*)",
       "Bash(git push --mirror:*)",

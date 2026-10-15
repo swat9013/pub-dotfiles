@@ -71,6 +71,30 @@ command = "~/.config/herdr/emacs-popup.sh"
 width = "90%"
 height = "90%"
 
+# issue / CL（PR・MR）ピッカー。起動元 pane の repo の open な一覧から選び、URL を貼る
+# （Ghostty cmd+shift+i → \x11I / cmd+shift+c → \x11C）。gh / glab は origin の host で選ぶ
+[[keys.command]]
+key = "prefix+shift+i"
+type = "popup"
+command = "~/.config/herdr/issue-cl-picker.sh issue"
+width = "90%"
+height = "80%"
+
+[[keys.command]]
+key = "prefix+shift+c"
+type = "popup"
+command = "~/.config/herdr/issue-cl-picker.sh cl"
+width = "90%"
+height = "80%"
+
+# Claude Code session の fork（Ghostty cmd+shift+f → \x11F）
+# フォーカス中 pane の session を `--fork-session` で複製し、右 pane で開く。
+# Claude の無い pane では通知だけ出す。
+[[keys.command]]
+key = "prefix+shift+f"
+type = "shell"
+command = "~/.config/herdr/fork-claude.sh"
+
 # レイアウト
 # 現 pane を起点に split を積んで組む。既存 pane はそのまま残す（並び替え相当）。
 [[keys.command]]

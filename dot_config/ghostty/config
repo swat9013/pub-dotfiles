@@ -52,6 +52,12 @@ keybind = super+b=unbind
 keybind = super+g=text:\x11g
 # cmd+e: repo ルートで emacs を起動 (herdr prefix+e。クリップボードの repo 内パスを開く)
 keybind = super+e=text:\x11e
+# cmd+shift+f: フォーカス中の Claude Code session を右 pane に fork (herdr prefix+shift+f)
+#   Ghostty 既定の end_search を上書きする (start_search の cmd+f は file-picker に譲渡済み)
+keybind = super+shift+f=text:\x11F
+# cmd+shift+i / cmd+shift+c: repo の open な issue / CL を選んで URL を貼る (herdr prefix+shift+i / prefix+shift+c)
+keybind = super+shift+i=text:\x11I
+keybind = super+shift+c=text:\x11C
 # ペイン移動は herdr 側 direct binding (ctrl+left 等) に委ねる (Ghostty で書き換えない)
 
 # タブ操作: cmd+t は Ghostty デフォルト (new_tab) のまま使う (override しない)

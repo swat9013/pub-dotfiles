@@ -15,6 +15,7 @@
 # 宣言が無いと毎回 trust が消える。install 側も宣言を entry 読み込み前に適用する
 # ので、この Brewfile 単体で trust が完結する (ADR 0019 §3)。
 tap "atlassian/acli", trusted: true  # acli (core に formula が無い)
+tap "swat9013/tap", trusted: true    # sbxr / claude-dispatcher (GoReleaser が生成する cask)
 
 # Bootstrap 層: 導入経路は環境ごと (mac = brew 直、Linux = bootstrap-remote.sh /
 # sandbox-env kit) だが、更新はこの宣言で全環境が収束する
@@ -67,13 +68,16 @@ npm "aws-cdk"
 npm "markdownlint-cli2"
 npm "opensrc"
 
+# Linux 版 stanza (on_linux) を持つ cask。Homebrew は Linux でも binary artifact の
+# cask を入れられるため mac ブロックの外に置く
+cask "swat9013/tap/claude-dispatcher"  # 着手可の issue を Claude Code に無人で実装させる
+
 if OS.mac?
   # Taps (macOS only)
   tap "docker/tap", trusted: true                  # Docker Sandboxes (sbx)
   tap "macos-fuse-t/homebrew-cask", trusted: true  # FUSE-T 公式 tap (sshfs-fuse-t 用)
   tap "songmu/tap", trusted: true
   tap "stablyai/orca", trusted: true               # Orca (cask "stablyai/orca/orca" の tap を明示管理)
-  tap "swat9013/tap", trusted: true                # sbxr / claude-dispatcher (GoReleaser が生成する cask)
 
   # System 基盤 (mac のみ brew。Linux は distro パッケージの bootstrap 層 —
   # brew より前に必要なため。ADR 0019 §4)
@@ -111,9 +115,9 @@ if OS.mac?
   brew "colima"        # Linux VM wrapper for Mac
   brew "docker"        # WSL2 uses Docker Desktop / docker-engine instead
   brew "docker-compose"
+  brew "docker-buildx" # BuildKit builder (docker build の新 backend)
   cask "docker/tap/sbx"  # Docker Sandboxes — AI agent を microVM に隔離 (Apple Silicon + macOS 14+)
   cask "swat9013/tap/sbxr"               # repo 宣言から sbx の sandbox VM を作る (sbx 前提のため mac のみ)
-  cask "swat9013/tap/claude-dispatcher"  # 着手可の issue を Claude Code に無人で実装させる (cask のため mac ブロック)
 
   brew "laminate"  # songmu/tap (text/code → image)
 

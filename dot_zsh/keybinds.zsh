@@ -91,17 +91,21 @@ if which fzf > /dev/null 2>&1; then
     zle -N fzf-grep-copy
     bindkey '\er' fzf-grep-copy
 
-    ## Ctrl+w で worktree を fzf 選択して切り替え（wt switch）
+    ## Ctrl+w で worktree を fzf 選択して切り替え（git worktree list + cd）
     function fzf-wt-switch() {
-        command -v wt >/dev/null 2>&1 || { zle reset-prompt; return }
-        local selected branch
-        selected=$(wt list --format json 2>/dev/null \
-            | jq -r '.[] | select(.is_current | not) | "\(.branch)\t\(.path)"' \
+        local top selected
+        top=$(git rev-parse --show-toplevel 2>/dev/null) || { zle reset-prompt; return }
+        selected=$(git worktree list --porcelain \
+            | awk -v cur="$top" '
+                /^worktree /{p=substr($0,10)}
+                /^branch /{b=substr($0,8); sub("^refs/heads/","",b)}
+                /^detached/{b="(detached)"}
+                /^$/{if(p!=cur)print b"\t"p; p=b=""}
+                END{if(p!="" && p!=cur)print b"\t"p}' \
             | fzf --delimiter='\t' --with-nth=1 --query="$LBUFFER" \
-                  --preview 'wt list -C {2}')
-        branch=${selected%%$'\t'*}
-        if [[ -n $branch ]]; then
-            BUFFER="wt switch ${(q)branch}"
+                  --preview 'git -C {2} log --oneline -10')
+        if [[ -n $selected ]]; then
+            BUFFER="cd ${(q)${selected#*$'\t'}}"
             zle accept-line
         fi
         zle reset-prompt
