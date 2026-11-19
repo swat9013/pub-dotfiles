@@ -45,8 +45,7 @@
   ;; 実行時に読み込まれる use-package macro を知らない。その結果
   ;; `(use-package foo ...)` が展開されずに関数呼び出しとして .eln に焼かれ、
   ;; load 時に .elc を差し置いて使われて `void-variable foo` で init が中断する。
-  ;; .eln は run_onchange_byte-compile-emacs.sh が use-package をロード済みの
-  ;; プロセス内で AOT 生成するので、遅延コンパイルは不要。
+  ;; 自分の設定は .elc / .eln を作らず source のまま読む。
   ;; deny-list は comp.el の defcustom で、early-init の時点では未ロード = 未 bound。
   ;; defcustom は既に値のある変数を上書きしないので、先に set しておけば効く
   ;; (boundp で gate すると常に false になり、設定が丸ごと無視される)。

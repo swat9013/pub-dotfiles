@@ -116,7 +116,11 @@ alias ccpa='claude --setting-sources project,local --permission-mode auto'
 alias ccps='claude --setting-sources project,local --model sonnet'
 alias ccs='claude --model sonnet'
 alias cch='claude --model haiku'
+alias ccf-l='claude --model fable --effort low'
+alias ccf-m='claude --model fable --effort medium'
+alias ccf-h='claude --model fable --effort high'
 alias ccid='claude --model sonnet --effort xhigh "/issue-dispatch"'  # 対話モードで /issue-dispatch を初期プロンプトに投入
+alias ccsk='claude --plugin-dir ~/.claude/swat-skills'  # swat-skills repo の session 用。release 版ではなく main checkout の skill を読む
 
 # Remote Control のセッション名を cwd から組み立てて標準出力へ返す（先頭ドットは落とす）
 # Example: repo → myapp / その worktree → myapp-i3 / 非git → カレントディレクトリ名

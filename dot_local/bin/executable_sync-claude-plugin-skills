@@ -1,0 +1,274 @@
+#!/usr/bin/env bash
+# Claude Code で有効にしている plugin の skill と agent を、opencode / pi / Antigravity から読めるように並べる。
+#
+# - skill: ~/.local/share/claude-plugin-skills/<plugin>/<skill> へ symlink を張り、
+#   Antigravity の inherits 用に ~/.local/share/claude-plugin-skills/skills.json も書く
+# - agent (opencode): opencode 形式に変換して ~/.config/opencode/agents/<plugin>:<name>.md に書く
+# - agent (Antigravity): Antigravity 形式に変換して ~/.gemini/config/agents/<plugin>:<name>.md に書く
+#
+# plugin の実体は ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/ にあり、
+# version が path に入るので設定ファイルへ直接は書けない。opencode と pi の設定には
+# skill の dir を、Antigravity の ~/.gemini/config/skills.json には skills.json の inherits を
+# 登録し、実体の追従はこの script が張り直して行う。
+#
+# opencode / Antigravity は ~/.claude/agents も plugin の agent もそのままでは読まず、
+# Claude 形式の frontmatter (`tools: Read, Grep` の文字列) は検証に落ちて読み飛ばすか
+# ツール権限が意図通りにならない。そのため agent は symlink ではなく変換して書く。
+# file 名と name を <plugin>:<name> にするのは、skill 本文が指名する
+# `subagent_type: <plugin>:<name>` と一致させるため。
+# 変換では model / effort / color を捨て (セッションのモデルを引き継ぐ):
+# - opencode: tools は「全部 deny + 列挙したツールだけ allow」の permissions に直す。先頭の "*" deny は
+#   external_directory (project 外の path) まで拒否し、worktree や $TMPDIR を読めなくなる。
+#   Claude Code の tools にはこの境界が無いので、末尾で external_directory を allow に戻す
+#   (規則は最後に当たったものが勝つ)。edit / shell は列挙が無ければ deny のまま。
+# - Antigravity: tools 無指定時は既定の read-only セットになるため、元の agent に tools 指定が無ければ
+#   全主要ツールを列挙し、指定があれば対応する Antigravity ツール名に写す。
+#
+# 対象は ~/.claude/settings.json の enabledPlugins が true の plugin。skill / agent の置き場は
+# plugin.json の skills / agents (文字列 or 配列) と既定の ./skills / ./agents。skill の各 path は、
+# 直下に SKILL.md があればそれ自体を、無ければ子 dir のうち SKILL.md を持つものを skill とみなす。
+# agent の各 path は .md file ならそれ自体を、dir なら直下の *.md を agent とみなす。
+#
+# 再実行安全: skill は一時 dir に組み立ててから入れ替え、agent は名前に `:` を含む file を
+# この script の持ち物として毎回作り直すので、消えた plugin の link / agent は残らない。
+# plugin を更新・追加したあとは再実行する (chezmoi apply でも走る)。
+set -euo pipefail
+
+claude_dir="${HOME}/.claude"
+settings="${claude_dir}/settings.json"
+installed="${claude_dir}/plugins/installed_plugins.json"
+dest="${HOME}/.local/share/claude-plugin-skills"
+opencode_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/opencode"
+agents_dest="${opencode_dir}/agents"
+agy_config_dir="${HOME}/.gemini/config"
+agy_agents_dest="${agy_config_dir}/agents"
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "sync-claude-plugin-skills: jq が無いため skip" >&2
+  exit 0
+fi
+if [ ! -f "$settings" ] || [ ! -f "$installed" ]; then
+  exit 0
+fi
+
+mkdir -p "$(dirname "$dest")"
+tmp=$(mktemp -d "${dest}.tmp.XXXXXX")
+agents_tmp="${tmp}.agents"
+agy_agents_tmp="${tmp}.agy-agents"
+mkdir -p "$agents_tmp" "$agy_agents_tmp"
+trap 'rm -rf "$tmp" "$agents_tmp" "$agy_agents_tmp"' EXIT
+
+link_skill() {
+  # $1: plugin 名, $2: skill dir
+  local plugin="$1" dir="$2" name
+  name=$(basename "$dir")
+  mkdir -p "${tmp}/${plugin}"
+  if [ -e "${tmp}/${plugin}/${name}" ]; then
+    return 0
+  fi
+  ln -s "$dir" "${tmp}/${plugin}/${name}"
+}
+
+# Claude Code の tool 名を opencode V2 の permission action に写す。対応が無ければ空
+tool_action() {
+  case "$1" in
+    Read) echo read ;;
+    Grep) echo grep ;;
+    Glob) echo glob ;;
+    WebSearch) echo websearch ;;
+    WebFetch) echo webfetch ;;
+    Bash) echo shell ;;
+    Edit | Write | MultiEdit) echo edit ;;
+    Skill) echo skill ;;
+    Agent | Task) echo subagent ;;
+    *) ;;
+  esac
+}
+
+# Claude Code の tool 名を Antigravity の tool 名に写す。対応が無ければ空
+agy_tool_names() {
+  case "$1" in
+    Read | Glob | Grep) echo read_file ;;
+    Edit | MultiEdit) echo edit_file ;;
+    Write) echo write_file ;;
+    Bash)
+      echo run_command
+      echo manage_task
+      ;;
+    WebSearch | WebFetch) echo search_web ;;
+    Agent | Task)
+      echo invoke_subagent
+      echo send_message
+      ;;
+    *) ;;
+  esac
+}
+
+convert_agent() {
+  # $1: plugin 名, $2: agent の .md file
+  local plugin="$1" file="$2" name out agy_out description="" tools="" has_tools=0 key value action agy_t
+  local -a actions=() agy_tools=()
+  name=$(basename "$file" .md)
+  out="${agents_tmp}/${plugin}:${name}.md"
+  agy_out="${agy_agents_tmp}/${plugin}:${name}.md"
+  [ -e "$out" ] && return 0
+
+  if [ "$(head -n 1 "$file")" != "---" ]; then
+    echo "sync-claude-plugin-skills: frontmatter が無いため agent を skip: $file" >&2
+    return 0
+  fi
+  while IFS= read -r line; do
+    [ "$line" = "---" ] && break
+    key="${line%%:*}"
+    value="${line#*:}"
+    value="${value# }"
+    case "$key" in
+      description) description="$value" ;;
+      tools) tools="$value" has_tools=1 ;;
+      *) ;;
+    esac
+  done < <(tail -n +2 "$file")
+
+  if [ -z "$description" ] || [ "$description" = "|" ] || [ "$description" = ">" ]; then
+    echo "sync-claude-plugin-skills: 1 行の description が無いため agent を skip: $file" >&2
+    return 0
+  fi
+
+  if [ "$has_tools" = 1 ]; then
+    actions=("*")
+    IFS=',' read -ra items <<<"$tools"
+    for item in "${items[@]}"; do
+      item="${item//[[:space:]]/}"
+      [ -n "$item" ] || continue
+      action=$(tool_action "$item")
+      if [ -z "$action" ]; then
+        echo "sync-claude-plugin-skills: opencode に対応の無い tool を許可しない: ${item} (${file})" >&2
+      else
+        actions+=("$action")
+      fi
+      while IFS= read -r agy_t; do
+        [ -n "$agy_t" ] && agy_tools+=("$agy_t")
+      done < <(agy_tool_names "$item")
+    done
+  else
+    agy_tools=(read_file edit_file write_file run_command manage_task search_web)
+  fi
+
+  {
+    echo "---"
+    # 元の YAML の scalar (引用符を含む) をそのまま写す
+    printf 'description: %s\n' "$description"
+    echo "mode: subagent"
+    if [ "${#actions[@]}" -gt 0 ]; then
+      printf 'permissions: %s\n' "$(printf '%s\n' "${actions[@]}" | jq -Rnc '
+        [inputs] as $a
+        | [{action: "*", resource: "*", effect: "deny"}]
+          + ($a[1:] | unique | map({action: ., resource: "*", effect: "allow"}))
+          + [{action: "external_directory", resource: "*", effect: "allow"}]')"
+    fi
+    echo "---"
+    # 本文は 2 つ目の --- の次の行から
+    awk 'n >= 2 { print; next } /^---$/ { n++ }' "$file"
+  } >"$out"
+
+  {
+    echo "---"
+    printf 'name: "%s:%s"\n' "$plugin" "$name"
+    printf 'description: %s\n' "$description"
+    echo "subagent: true"
+    echo "mainAgent: false"
+    printf 'tools: %s\n' "$(
+      if [ "${#agy_tools[@]}" -gt 0 ]; then
+        printf '%s\n' "${agy_tools[@]}"
+      fi | jq -Rnc '[inputs | select(length > 0)] | unique'
+    )"
+    echo "---"
+    awk 'n >= 2 { print; next } /^---$/ { n++ }' "$file"
+  } >"$agy_out"
+}
+
+enabled=$(jq -r '(.enabledPlugins // {}) | to_entries[] | select(.value == true) | .key' "$settings")
+
+while IFS= read -r id; do
+  [ -n "$id" ] || continue
+  plugin="${id%@*}"
+  root=$(jq -r --arg id "$id" '(.plugins[$id] // []) as $e | ($e | map(select(.scope == "user"))) + $e | first | .installPath // empty' "$installed")
+  [ -n "$root" ] && [ -d "$root" ] || continue
+
+  paths=("./skills")
+  agent_paths=("./agents")
+  manifest="${root}/.claude-plugin/plugin.json"
+  if [ -f "$manifest" ]; then
+    while IFS= read -r p; do
+      [ -n "$p" ] && paths+=("$p")
+    done < <(jq -r '.skills // empty | if type == "array" then .[] else . end' "$manifest")
+    while IFS= read -r p; do
+      [ -n "$p" ] && agent_paths+=("$p")
+    done < <(jq -r '.agents // empty | if type == "array" then .[] else . end' "$manifest")
+  fi
+
+  for p in "${paths[@]}"; do
+    dir="${root}/${p#./}"
+    dir="${dir%/}"
+    [ -d "$dir" ] || continue
+    if [ -f "${dir}/SKILL.md" ]; then
+      link_skill "$plugin" "$dir"
+      continue
+    fi
+    for child in "$dir"/*/; do
+      child="${child%/}"
+      [ -f "${child}/SKILL.md" ] && link_skill "$plugin" "$child"
+    done
+  done
+
+  for p in "${agent_paths[@]}"; do
+    target="${root}/${p#./}"
+    target="${target%/}"
+    if [ -f "$target" ]; then
+      convert_agent "$plugin" "$target"
+    elif [ -d "$target" ]; then
+      for f in "$target"/*.md; do
+        [ -f "$f" ] && convert_agent "$plugin" "$f"
+      done
+    fi
+  done
+done <<<"$enabled"
+
+# Antigravity の ~/.gemini/config/skills.json から inherits で参照される一覧を生成する。
+# inherits 先の skills.json では entries の相対 path がそのファイル自身のディレクトリ
+# (~/.local/share/claude-plugin-skills) を基準に解決されるため、plugin ごとのディレクトリと
+# ~/.claude/skills をそこからの相対 path で並べる。
+plugin_rel_paths=()
+for d in "$tmp"/*/; do
+  [ -d "$d" ] || continue
+  plugin_rel_paths+=("$(basename "${d%/}")")
+done
+{
+  if [ "${#plugin_rel_paths[@]}" -gt 0 ]; then
+    printf '%s\n' "${plugin_rel_paths[@]}"
+  fi
+  printf '%s\n' "../../../.claude/skills"
+} | jq -Rn '{entries: [inputs | select(length > 0) | {path: .}]}' >"${tmp}/skills.json"
+
+rm -rf "$dest"
+mv "$tmp" "$dest"
+
+# opencode を配布していない環境 (設定 dir が無い) には agent を書かない
+if [ -d "$opencode_dir" ]; then
+  mkdir -p "$agents_dest"
+  find "$agents_dest" -maxdepth 1 -type f -name '*:*.md' -delete
+  for f in "$agents_tmp"/*.md; do
+    [ -f "$f" ] && mv "$f" "$agents_dest/"
+  done
+fi
+
+# Antigravity を配布していない環境 (設定 dir が無い) には agent を書かない
+if [ -d "$agy_config_dir" ]; then
+  mkdir -p "$agy_agents_dest"
+  find "$agy_agents_dest" -maxdepth 1 -type f -name '*:*.md' -delete
+  for f in "$agy_agents_tmp"/*.md; do
+    [ -f "$f" ] && mv "$f" "$agy_agents_dest/"
+  done
+fi
+rm -rf "$agents_tmp" "$agy_agents_tmp"
+trap - EXIT

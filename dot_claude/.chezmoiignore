@@ -1,3 +1,6 @@
 # settings.base.json は modify_settings.json.tmpl が include する正本で、それ自体は
 # ~/.claude/ に置かない (ADR 0020)。target 名で書く (dot_ prefix 無し)。
 settings.base.json
+
+# mod のテストは repo の中で走らせる（scripts/test/shell/test-session-title-mod.sh）。配布先には置かない。
+skills/*/hooks/*.test.ts

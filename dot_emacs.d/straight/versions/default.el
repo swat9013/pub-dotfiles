@@ -17,7 +17,6 @@
  ("eglot" . "267729372e9625f53e89065c3960d0887a7f92b6")
  ("el-get" . "447b7efc9fca29a087f4ec29c5d8ccb580cd1c78")
  ("eldoc" . "cfd17854b6b9b6830111851ad21c2d560db07dfb")
- ("emacs-corfu-terminal" . "501548c3d51f926c687e8cd838c5865ec45d03cc")
  ("emacsmirror-mirror" . "f96d1a6573edc7baf5682727f5efe7d2647cce52")
  ("external-completion" . "97533a017162bb0029255a28f216bf14b13196b7")
  ("flymake" . "62e3155254d484cf0fddbdce5119a28a2c454c82")

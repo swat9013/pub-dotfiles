@@ -231,7 +231,9 @@ cpuType: ""
 #     script: echo "everything is ready"
 #
 # Default: []
-provision: []
+provision:
+  - mode: system
+    script: chmod 666 /var/run/docker.sock
 
 # Modify ~/.ssh/config automatically to include a SSH config for the virtual machine.
 # SSH config will still be generated in $COLIMA_HOME/ssh_config regardless.

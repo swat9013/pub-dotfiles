@@ -89,7 +89,11 @@
   (transient-mark-mode 1)
   (auto-compression-mode 1)
   (auto-image-file-mode 1)
-  (which-function-mode 1))
+  (which-function-mode 1)
+  ;; treemacs buffer は which-func の対象から外す。Emacs 31 の which-func は
+  ;; major-mode が変わるたびに imenu の索引を作るが、treemacs-mode では
+  ;; (wrong-type-argument arrayp nil) で失敗し、起動のたびに error が出る。
+  (add-to-list 'which-func-non-auto-modes 'treemacs-mode))
 
 ;; show-paren-mode 設定
 (setq show-paren-style 'mixed)

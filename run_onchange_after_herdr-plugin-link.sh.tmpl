@@ -1,0 +1,16 @@
+#!/bin/sh
+# {{ include "dot_config/herdr/agent-notify/herdr-plugin.toml" | sha256sum }}
+#
+# herdr plugin (~/.config/herdr/agent-notify) を herdr に登録する。manifest が
+# 変わるたびに登録し直す（herdr は link 時に manifest を読むため）。
+# plugin は macOS 通知を出すものなので darwin だけで走らせる。herdr が無いホストでは skip。
+{{ if ne .chezmoi.os "darwin" -}}
+exit 0
+{{ end -}}
+set -e
+if ! command -v herdr >/dev/null 2>&1; then
+  exit 0
+fi
+# 再実行安全: 既存の登録を外してから登録する（未登録なら unlink の失敗を無視）。
+herdr plugin unlink local.agent-notify >/dev/null 2>&1 || true
+herdr plugin link "$HOME/.config/herdr/agent-notify" >/dev/null

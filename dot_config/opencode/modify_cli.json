@@ -1,0 +1,52 @@
+#!/bin/sh
+# ~/.config/opencode/cli.json (OpenCode の CLI / TUI 設定) に、この repo で決める key を重ねる。
+# chezmoi が現在の内容を stdin で渡し、stdout を新内容として書く。
+#
+# cli.json は opencode 自身や Orca (plugins に絶対 path の file:// を足す) も書くため、
+# file を正本で上書きせず、下の key だけを上書きする。ほかの key と、ここで決めない
+# keybind は触らない。
+#
+# keybind は Emacs 風に寄せる。opencode の既定を変える ID だけを書き、既定に足す
+# ものは既定の値も並べる (ID ごとに値を置き換えるため)。
+# - ctrl+p / ctrl+n: 入力欄の上下移動と履歴。入力欄では履歴の command が上下の key を先に
+#   受けるので両方に足す。既定で ctrl+p を持つ command palette は alt+x へ移す
+# - ctrl+h: kitty keyboard protocol 下では backspace と区別されるため足す
+# - ctrl+_ / ctrl+/: undo。ctrl+_ は legacy では ctrl+_、kitty では ctrl+shift+- として届く
+# - alt+< / alt+>: 入力欄の先頭 / 末尾。`alt+<` は legacy でも kitty でも一致しない
+#   (legacy の ESC < は key 名が空、kitty は shift 前の key を返す) ため alt+shift+, / . を
+#   key stroke の object で書く (文字列の "," は代替の区切りと解釈される)。legacy の端末では効かない
+# - ctrl+g: 中断 (escape と同じく 2 回押し)。既定で ctrl+g を持つ session.first からは外す
+set -eu
+
+current=$(cat)
+
+if [ -z "$current" ]; then
+	# shellcheck disable=SC2016 # $schema は JSON の key で展開しない
+	current='{"$schema": "https://opencode.ai/v2/cli.json"}'
+fi
+
+keybinds='{
+  "input.move.up": "up,ctrl+p",
+  "input.move.down": "down,ctrl+n",
+  "prompt.history.previous": "up,ctrl+p",
+  "prompt.history.next": "down,ctrl+n",
+  "command.palette.show": "alt+x",
+  "input.backspace": "backspace,shift+backspace,ctrl+h",
+  "input.undo": "ctrl+-,super+z,ctrl+_,ctrl+shift+-,ctrl+/",
+  "input.buffer.home": {"name": ",", "meta": true, "shift": true},
+  "input.buffer.end": {"name": ".", "meta": true, "shift": true},
+  "session.interrupt": "escape,ctrl+g",
+  "session.first": "home,alt+home,kphome"
+}'
+
+# jq 不在や壊れた JSON のときは現在の内容をそのまま返す (opencode 側の設定を消さない)
+if command -v jq >/dev/null 2>&1 &&
+	merged=$(printf '%s' "$current" | jq --argjson keybinds "$keybinds" '
+	  .theme.mode = "dark"
+	  | .attention.notifications = true
+	  | .keybinds = ((.keybinds // {}) + $keybinds)
+	' 2>/dev/null); then
+	printf '%s\n' "$merged"
+else
+	printf '%s\n' "$current"
+fi

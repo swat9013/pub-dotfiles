@@ -1,0 +1,75 @@
+#!/bin/sh
+# ~/.config/opencode/opencode.json に Claude Code の設定を持ち込む。
+# chezmoi が現在の内容を stdin で渡し、stdout を新内容として書く。
+#
+# opencode.json は `opencode mcp add --global` 等で opencode 自身も書くため、file を
+# 正本で上書きせず、次の key だけを触る。ほかの key はそのまま残す。
+#   - skills: 足りない entry だけを追記する。~/.claude/skills は opencode が既定で
+#     読むので書かない。plugin の skill は版付きの path にあるため、
+#     sync-claude-plugin-skills が symlink を並べる dir を登録する
+#   - instructions: 足りない entry だけを追記する。opencode V2 は AGENTS.md しか
+#     読まないため、CLAUDE.md (相対 path は cwd から project root まで上方向に探す) と
+#     Claude Code の output style を足す
+#   - permissions: Claude Code の正本 dot_claude/settings.base.json の
+#     permissions.ask / deny から毎回生成して丸ごと置き換える (allow は移さない)。
+#     opencode は「Allow always」を DB に保存し、opencode.json の permissions を
+#     書かないので、この script が持ち主になる。手で足した rule は次の apply で
+#     消えるので、個人の rule は project 側の opencode.json に書く
+set -eu
+
+current=$(cat)
+skills='["~/.local/share/claude-plugin-skills"]'
+instructions='["CLAUDE.md", "~/.claude/output-styles/judgment-audit.md"]'
+
+claude_settings=$(cat <<'BASE_JSON'
+{{ include "dot_claude/settings.base.json" -}}
+BASE_JSON
+)
+
+if [ -z "$current" ]; then
+	# shellcheck disable=SC2016 # $schema は JSON の key で展開しない
+	current='{"$schema": "https://opencode.ai/config.json"}'
+fi
+
+# Claude Code の rule を opencode の {action, resource, effect} に変換する。
+# opencode は最後に当たった rule を採るので ask → deny の順に並べて deny を勝たせる。
+#   - Bash(X:*) → shell "X *" (末尾の " *" は引数無しの X にも当たる)。
+#     `:*` の無い Bash(...) は中身をそのまま resource にする
+#   - Read / Edit → read / edit。opencode の * は / も跨ぐので ** を * に畳む。
+#     resource は project 内なら cwd 相対の path (../ を含みうる)、外なら絶対 path
+#     なので、./**/X は X (cwd 直下) と */X (それより下・外) の 2 本にする。
+#     ~/ は opencode が home に展開する
+#   - それ以外 (NotebookEdit・Claude Code 固有の / 起点 path 等) は対応物が無いので捨てる
+# shellcheck disable=SC2016 # jq の $var は shell で展開しない
+convert='
+  def fold: gsub("\\*\\*"; "*");
+  def paths:
+    if startswith("./**/") then .[5:] | fold | (., (select(startswith("*") | not) | "*/" + .))
+    elif startswith("./") then .[2:] | fold
+    elif startswith("/") then empty
+    else fold end;
+  def rules($effect):
+    .[] | capture("^(?<tool>Bash|Read|Edit)\\((?<arg>.*)\\)$")
+    | if .tool == "Bash" then
+        {action: "shell", resource: (.arg | if endswith(":*") then .[:-2] + " *" else . end), effect: $effect}
+      else
+        {action: (.tool | ascii_downcase), resource: (.arg | paths), effect: $effect}
+      end;
+  [(.permissions.ask // [] | rules("ask")), (.permissions.deny // [] | rules("deny"))]
+'
+
+# jq 不在や壊れた JSON のときは現在の内容をそのまま返す (opencode 側の設定を消さない)
+if command -v jq >/dev/null 2>&1 &&
+	permissions=$(printf '%s' "$claude_settings" | jq -c "$convert" 2>/dev/null) &&
+	merged=$(printf '%s' "$current" | jq \
+		--argjson skills "$skills" \
+		--argjson instructions "$instructions" \
+		--argjson permissions "$permissions" '
+	  .skills = ((.skills // []) + ($skills - (.skills // [])))
+	  | .instructions = ((.instructions // []) + ($instructions - (.instructions // [])))
+	  | .permissions = $permissions
+	' 2>/dev/null); then
+	printf '%s\n' "$merged"
+else
+	printf '%s\n' "$current"
+fi

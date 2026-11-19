@@ -1,0 +1,29 @@
+#!/bin/sh
+# ~/.pi/agent/settings.json の skills に Claude Code の skill 置き場を足す。
+# chezmoi が現在の内容を stdin で渡し、stdout を新内容として書く。
+#
+# settings.json は pi 自身も /settings や /login で書くため、file を正本で上書きせず、
+# skills 配列に足りない entry だけを追記する。ほかの key と既存の entry は触らない。
+#
+# pi は ~/.agents/skills とプロジェクトの CLAUDE.md を既定で読むが、~/.claude/skills は
+# 読まない。plugin の skill は版付きの path にあるため、sync-claude-plugin-skills が
+# symlink を並べる dir を登録する。
+set -eu
+
+current=$(cat)
+entries='["~/.claude/skills", "~/.local/share/claude-plugin-skills"]'
+
+if [ -z "$current" ]; then
+	# shellcheck disable=SC2016 # $schema は JSON の key で展開しない
+	current='{"$schema": "https://pi.dev/schemas/settings.schema.json"}'
+fi
+
+# jq 不在や壊れた JSON のときは現在の内容をそのまま返す (pi 側の設定を消さない)
+if command -v jq >/dev/null 2>&1 &&
+	merged=$(printf '%s' "$current" | jq --argjson add "$entries" '
+	  .skills = ((.skills // []) + ($add - (.skills // [])))
+	' 2>/dev/null); then
+	printf '%s\n' "$merged"
+else
+	printf '%s\n' "$current"
+fi

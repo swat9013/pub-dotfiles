@@ -1,0 +1,120 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+"""AWS access portal でコピーした一時的な認証情報を stdin から読み、credentials の指定 profile に書き込む。
+
+入力は export 形式 (export AWS_ACCESS_KEY_ID="...") と credentials 形式 (aws_access_key_id=...) のどちらでもよい。
+credentials 形式の [profile] 見出しは読み飛ばし、書き込み先は引数で決める。
+例: pbpaste | aws-creds-set my-profile
+"""
+
+import argparse
+import os
+import re
+import sys
+import tempfile
+
+KEYS = ("aws_access_key_id", "aws_secret_access_key", "aws_session_token")
+# botocore は aws_session_token より旧名 aws_security_token を先に読むので、残すと古い token が使われる
+STALE_KEYS = (*KEYS, "aws_security_token")
+# botocore が使う configparser と同じく、見出しは最初の [ から最後の ] までを空白も含めて名前にする
+SECTION = re.compile(r"^\s*\[(.+)\]")
+
+
+class InputError(Exception):
+    pass
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("profile")
+    args = p.parse_args(argv)
+    if not args.profile or args.profile != args.profile.strip() or any(c in args.profile for c in "[]\r\n"):
+        p.error("profile に空文字・前後の空白・[ ] ・改行は使えません")
+    return args
+
+
+def parse_credentials(text: str) -> dict[str, str]:
+    """両形式とも、export を外して = の左を小文字にすると同じキー名になる。"""
+    if sum(1 for line in text.splitlines() if SECTION.match(line)) > 1:
+        raise InputError("入力に profile の見出しが複数あります")
+    found: dict[str, str] = {}
+    for line in text.splitlines():
+        key, sep, value = re.sub(r"^\s*(export\s+)?", "", line).partition("=")
+        key = key.strip().lower()
+        if not sep or key not in KEYS:
+            continue
+        if key in found:
+            raise InputError(f"入力に {key} が複数あります")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] == '"':
+            value = value[1:-1]
+        found[key] = value
+    for key in KEYS:
+        if not found.get(key):
+            raise InputError(f"入力に {key} がありません")
+        if re.search(r"\s", found[key]) or not found[key].isprintable():
+            raise InputError(f"{key} の値に空白か制御文字が入っています")
+    return found
+
+
+def apply_profile(lines: list[str], profile: str, creds: dict[str, str]) -> tuple[list[str], bool]:
+    """profile の section の認証情報だけを入れ替えた行を返す。他の section・キー・コメントは残す。"""
+    new_entries = [f"{k} = {creds[k]}\n" for k in KEYS]
+    if lines and not lines[-1].endswith("\n"):
+        lines = [*lines[:-1], lines[-1] + "\n"]
+    header = next((i for i, line in enumerate(lines) if (m := SECTION.match(line)) and m[1] == profile), None)
+    if header is None:
+        return [*lines, *(["\n"] if lines else []), f"[{profile}]\n", *new_entries], False
+    end = next((i for i in range(header + 1, len(lines)) if SECTION.match(lines[i])), len(lines))
+    # configparser は = と : のどちらもキーと値の区切りに使う
+    body = [line for line in lines[header + 1 : end] if re.split(r"[=:]", line, maxsplit=1)[0].strip().lower() not in STALE_KEYS]
+    return [*lines[: header + 1], *new_entries, *body, *lines[end:]], True
+
+
+# aws configure set に任せないのは、secret が argv に載り、3 キーを 1 回で書けず、旧名 aws_security_token を消せないため
+def write_atomically(path: str, lines: list[str]) -> None:
+    directory = os.path.dirname(path)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=directory, prefix=".credentials.")  # mkstemp は 0600 で作る
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.writelines(lines)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+
+
+def main(args: argparse.Namespace) -> int:
+    if sys.stdin.isatty():
+        print("aws-creds-set: stdin に認証情報を渡してください (例: pbpaste | aws-creds-set <profile>)", file=sys.stderr)
+        return 2
+    try:
+        creds = parse_credentials(sys.stdin.read())
+    except InputError as e:
+        print(f"aws-creds-set: {e}。何も書き込んでいません", file=sys.stderr)
+        return 1
+    # botocore と同じく変数と ~ を展開する。symlink を通常 file で置き換えないよう、実体へ書く
+    configured = os.environ.get("AWS_SHARED_CREDENTIALS_FILE") or "~/.aws/credentials"
+    path = os.path.realpath(os.path.expanduser(os.path.expandvars(configured)))
+    try:
+        with open(path) as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        lines = []
+    new_lines, replaced = apply_profile(lines, args.profile, creds)
+    write_atomically(path, new_lines)
+    print(f"aws-creds-set: profile [{args.profile}] を{'置き換えました' if replaced else '新規作成しました'}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(parse_args()))
+    except KeyboardInterrupt:
+        sys.exit(130)

@@ -1,6 +1,5 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "advisorModel": "fable",
   "agentPushNotifEnabled": true,
   "autoMemoryEnabled": false,
   "awaySummaryEnabled": false,
@@ -11,7 +10,8 @@
     "evolutionary-naming@kawasima-skills": false,
     "mattpocock-skills@claude-plugins-official": false,
     "modularity@vladikk-modularity": false,
-    "swat-obsidian@swat-obsidian": true
+    "swat-obsidian@swat-obsidian": true,
+    "swat-skills@swat9013": true
   },
   "env": {
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60",
@@ -19,7 +19,8 @@
     "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
-    "DISABLE_ERROR_REPORTING": "1"
+    "DISABLE_ERROR_REPORTING": "1",
+    "UV_CACHE_DIR": "/tmp/claude/uv-cache"
   },
   "extraKnownMarketplaces": {
     "claude-community": {
@@ -31,6 +32,13 @@
     "kawasima-skills": {
       "source": {
         "repo": "kawasima/evolutionary-naming",
+        "source": "github"
+      }
+    },
+    "swat9013": {
+      "autoUpdate": true,
+      "source": {
+        "repo": "swat9013/claude-skills",
         "source": "github"
       }
     },
@@ -152,6 +160,7 @@
       "Glob",
       "Read(.claude/skills/**/*)",
       "Read(~/.claude/skills/**/*)",
+      "Read(~/.claude/swat-skills/**/*)",
       "Read(~/ghq/**)",
       "Skill",
       "WebSearch",
@@ -173,17 +182,6 @@
     ],
     "defaultMode": "auto",
     "deny": [
-      "Bash(/bin/bash:*)",
-      "Bash(/bin/sh:*)",
-      "Bash(/bin/zsh:*)",
-      "Bash(/opt/homebrew/bin/bash:*)",
-      "Bash(/opt/homebrew/bin/zsh:*)",
-      "Bash(/usr/bin/bash:*)",
-      "Bash(/usr/bin/sh:*)",
-      "Bash(/usr/bin/zsh:*)",
-      "Bash(/usr/local/bin/bash:*)",
-      "Bash(/usr/local/bin/zsh:*)",
-      "Bash(bash:*)",
       "Bash(chmod 777:*)",
       "Bash(gh api --method DELETE:*)",
       "Bash(gh api -X DELETE:*)",
@@ -194,15 +192,12 @@
       "Bash(gh secret delete:*)",
       "Bash(gh secret set:*)",
       "Bash(gh workflow disable:*)",
-      "Bash(git -C * push --delete*)",
       "Bash(git -C * push --force*)",
       "Bash(git -C * push --mirror*)",
       "Bash(git -C * push -f*)",
-      "Bash(git push --delete:*)",
       "Bash(git push --force:*)",
       "Bash(git push --mirror:*)",
       "Bash(git push -f:*)",
-      "Bash(git push origin --delete:*)",
       "Bash(git reset --hard:*)",
       "Bash(glab api --method DELETE:*)",
       "Bash(glab api -X DELETE:*)",
@@ -215,11 +210,9 @@
       "Bash(rm -rf ~)",
       "Bash(rm -rf ~/)",
       "Bash(scp:*)",
-      "Bash(sh:*)",
       "Bash(ssh:*)",
       "Bash(sudo:*)",
       "Bash(wget:*)",
-      "Bash(zsh:*)",
       "Edit(./**/*.crt)",
       "Edit(./**/*.key)",
       "Edit(./**/*.p12)",

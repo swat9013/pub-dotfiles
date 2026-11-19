@@ -58,6 +58,10 @@ keybind = super+shift+f=text:\x11F
 # cmd+shift+i / cmd+shift+c: repo の open な issue / CL を選んで URL を貼る (herdr prefix+shift+i / prefix+shift+c)
 keybind = super+shift+i=text:\x11I
 keybind = super+shift+c=text:\x11C
+# cmd+n / cmd+p: 次 / 前の agent へ移動 (herdr prefix+n / prefix+p → next_agent / previous_agent)
+#   Ghostty 既定の new_window (cmd+n) を上書きする。新規ウィンドウはメニューから開く
+keybind = super+n=text:\x11n
+keybind = super+p=text:\x11p
 # ペイン移動は herdr 側 direct binding (ctrl+left 等) に委ねる (Ghostty で書き換えない)
 
 # タブ操作: cmd+t は Ghostty デフォルト (new_tab) のまま使う (override しない)
@@ -67,6 +71,10 @@ keybind = super+shift+t=text:\x11t
 #   Ghostty の close_surface は cmd+w から外れる。ウィンドウ自体はメニューか cmd+q で閉じる
 keybind = super+w=text:\x11D
 # workspace 巡回は shift+tab (herdr 側 direct binding、Ghostty 設定不要)
+# cmd+shift+n / cmd+shift+p: 次 / 前の workspace へ移動 (herdr prefix+shift+n / prefix+shift+p)
+#   Ghostty 既定の toggle_command_palette (cmd+shift+p) を上書きする
+keybind = super+shift+n=text:\x11N
+keybind = super+shift+p=text:\x11P
 
 # Claude Code 複数行入力 (Shift+Enter を Option+Enter 相当に変換)
 # mux 非依存で Claude Code 向けの変換のため herdr 移行後も維持

@@ -1,6 +1,6 @@
 # Usage: brew bundle install --global && brew bundle cleanup --global
 #
-# package manager の正本 (ADR 0019)。3 環境 (mac / SSH remote / sandbox VM) が
+# package manager の正本 (ADR 0019)。2 環境 (mac / SSH remote) が
 # この manifest から導入する。mise は runtime version manager 専任
 # (正本: dot_config/mise/config.toml。per-project で版を切り替える言語処理系のみ)。
 # 新規 CLI の追加はここを既定とし、「per-project で版を切り替えたい」ものだけ
@@ -17,8 +17,8 @@
 tap "atlassian/acli", trusted: true  # acli (core に formula が無い)
 tap "swat9013/tap", trusted: true    # sbxr / claude-dispatcher (GoReleaser が生成する cask)
 
-# Bootstrap 層: 導入経路は環境ごと (mac = brew 直、Linux = bootstrap-remote.sh /
-# sandbox-env kit) だが、更新はこの宣言で全環境が収束する
+# Bootstrap 層: 導入経路は環境ごと (mac = brew 直、Linux = bootstrap-remote.sh) だが、
+# 更新はこの宣言で全環境が収束する
 brew "chezmoi"
 brew "mise"
 
@@ -36,12 +36,16 @@ brew "git-delta"
 brew "gitleaks"
 brew "glab"
 brew "glow"
+brew "gmailctl"
 brew "gogcli"
 brew "hadolint"
 brew "herdr"
 brew "jq"
 brew "lazygit"
+brew "libpq", link: true  # psql 等の client。keg-only のため link しないと PATH に出ない
 brew "mermaid-cli"
+brew "opencode"
+brew "pi-coding-agent"  # pi (earendil-works/pi)。npm の @mariozechner/pi-coding-agent は deprecated
 brew "pre-commit"
 brew "ripgrep"
 brew "sheldon"
@@ -51,8 +55,7 @@ brew "uv"
 
 # Editor: distro の emacs は版がホスト依存で、AL2023 の 28.2 は設定 (Emacs 29+ 前提)
 # が成立しなかった (ADR 0019 §4)。brew の emacs は tree-sitter 有効 / native-comp 無効
-# (libgccjit 非依存) — byte-compile へは run_onchange_byte-compile-emacs.sh.tmpl が
-# native-comp-available-p gate で自動縮退する。
+# (libgccjit 非依存)。設定の byte-compile 成果物は配布しない (ADR 0029)。
 brew "emacs"
 
 # Diagram: AL2023 の repo に plantuml が無く distro ではパリティが崩れていたため
@@ -77,7 +80,6 @@ if OS.mac?
   tap "docker/tap", trusted: true                  # Docker Sandboxes (sbx)
   tap "macos-fuse-t/homebrew-cask", trusted: true  # FUSE-T 公式 tap (sshfs-fuse-t 用)
   tap "songmu/tap", trusted: true
-  tap "stablyai/orca", trusted: true               # Orca (cask "stablyai/orca/orca" の tap を明示管理)
 
   # System 基盤 (mac のみ brew。Linux は distro パッケージの bootstrap 層 —
   # brew より前に必要なため。ADR 0019 §4)
@@ -103,13 +105,10 @@ if OS.mac?
   brew "ollama"        # mac では brew services で常駐管理する
 
   # CLI tools (macOS only)
+  cask "antigravity-cli"  # Google Antigravity CLI (agy)
   brew "gsed"          # Linux already has GNU sed
   brew "mas"           # macOS App Store CLI
   brew "terminal-notifier"
-
-  # Filesystem (macOS) — cask を brew より先に評価させるため CLI tools 群と分離
-  cask "fuse-t"        # kext 不要な FUSE 実装 (sshfs-fuse-t が依存)
-  brew "macos-fuse-t/homebrew-cask/sshfs-fuse-t"  # sshmount 用 (dot_zsh/sshfs.zsh)
 
   # Infrastructure (macOS only)
   brew "colima"        # Linux VM wrapper for Mac
@@ -127,12 +126,10 @@ if OS.mac?
 
   # GUI apps (macOS cask)
   cask "battery"
-  cask "codex"
   cask "dbeaver-community"
   cask "ghostty"
   cask "hammerspoon"
   cask "obsidian"
-  cask "stablyai/orca/orca"
   cask "via"
   cask "visual-studio-code"
   cask "xquartz"
@@ -140,7 +137,6 @@ if OS.mac?
 
   # Fonts (macOS cask) — config が font-family で名指ししているものだけを入れる
   cask "font-jetbrains-mono"  # dot_emacs.d/lisp/init-ui.el (GUI Emacs)
-  cask "font-plemol-jp"       # dot_config/zed/settings.json, vscode/settings.json (PlemolJP35)
 
   # VS Code extensions (managed by macOS Code.app; WSL2 uses Remote-WSL)
   vscode "3w36zj6.textlint"

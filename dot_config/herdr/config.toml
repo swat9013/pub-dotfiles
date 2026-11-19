@@ -8,10 +8,15 @@
 onboarding = false
 
 [theme]
-# Follow host terminal light/dark appearance (Ghostty auto-switches on macOS).
-auto_switch = true
-dark_name = "catppuccin"
-light_name = "catppuccin-latte"
+# Ghostty は暗いテーマ固定のため auto_switch は使わず、ダークテーマに固定する。
+name = "catppuccin"
+
+# サイドバーのフォーカス行・Navigate カーソル行が背景に埋もれるため catppuccin の surface1 で強調する。
+[theme.custom]
+active_row_bg = "#45475a"
+selection_bg = "#45475a"
+# ダークテーマの区切り線が背景に埋もれるため catppuccin の overlay0 で見えるようにする。
+surface_dim = "#6c7086"
 
 [keys]
 # C-q は keybinds.zsh の `stty -ixon` で XON/XOFF から解放済み。
@@ -32,7 +37,15 @@ next_tab = "shift+right"
 new_workspace = "prefix+t"
 
 # workspace 巡回。Claude Code の shift+tab モード切替は不使用のため専有してよい。
-next_workspace = "shift+tab"
+# Ghostty から cmd+shift+n → \x11N / cmd+shift+p → \x11P が注入される。
+next_workspace = ["shift+tab", "prefix+shift+n"]
+previous_workspace = "prefix+shift+p"
+
+# サイドバーの並びで次 / 前の agent へ移動（Ghostty cmd+n → \x11n / cmd+p → \x11p）。
+# 接続中の machine を横断できるのは組み込み action だけ（shell command は実行先 server の
+# agent しか見えず、client の選択 machine も切り替えられない）。working の agent にも止まる。
+next_agent = "prefix+n"
+previous_agent = "prefix+p"
 
 # built-in default の譲り渡し: 下の [[keys.command]] が素文字 chord（prefix+e / prefix+g）
 # を使うため、default binding と衝突するものを shift 付きへ退避する。
@@ -40,6 +53,8 @@ next_workspace = "shift+tab"
 edit_scrollback = "prefix+shift+s"
 # goto: default prefix+g → lazygit 起動（prefix+g）に譲る
 goto = "prefix+shift+o"
+# rename_pane: default prefix+shift+p → previous_workspace（prefix+shift+p）に譲る
+rename_pane = "prefix+shift+m"
 
 # NOTE: 以下 3 つは popup type で使う。key は素文字 chord（prefix+g / prefix+f / prefix+e）で、
 # 衝突する edit_scrollback / goto は上で shift 付きへ退避してある。
@@ -119,11 +134,27 @@ height = "40%"
 [ui]
 # Show detected agent labels in pane borders.
 show_agent_labels_on_pane_borders = true
+# サイドバーで「対応が要るか」を見分ける。状態を色ではなく形の違う記号で出し、
+# 注意が要る順（blocked が先頭）に並べる。
+status_indicators = "symbols"
+agent_panel_sort = "priority"
+# 2 行目のタスク名（Claude Code の terminal title）が読める幅（既定 26 / 最大 36）。
+sidebar_width = 36
+sidebar_max_width = 48
+
+# Claude の agent 行: 1 行目に状態と居場所（machine は herdr 既定の行から引き継ぐ）、2 行目に何のタスクか。
+# terminal_title_stripped は Claude Code の session 名（terminal title）から状態記号を除いたもの。
+[ui.sidebar.agents.rows_by_agent]
+claude = [
+  ["state_icon", "state_text", "machine", "workspace", "tab"],
+  ["terminal_title_stripped"],
+]
 
 [ui.toast]
-# herdr が agent 状態から通知を組み立て、外側ターミナル
-# （Ghostty: desktop-notifications = true）に発行を委譲する。
-delivery = "terminal"
+# herdr 標準の通知は出さない。文面が「<agent> finished / <workspace>」固定で、押しても
+# terminal を前面に出すだけのため、plugin（agent-notify/）が代わりに通知を出す。
+# 接続先 machine の agent は Hammerspoon が agent-notify/poll-machines.sh を定期起動して通知する。
+delivery = "off"
 
 [experimental]
 # macOS + CJK IME: swap to an ASCII-capable input source while prefix mode is

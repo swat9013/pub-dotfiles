@@ -1,6 +1,6 @@
 -- ~/.hammerspoon/init.lua
 -- 管理: chezmoi source = dot_hammerspoon/init.lua
--- 役割: hotkey → アクション、外部ディスプレイ接続/切断時の自動処理、ログイン時ジョブ、朝の URL。
+-- 役割: hotkey → アクション、外部ディスプレイ接続/切断時の自動処理、ログイン時ジョブ、朝の URL、herdr の machine 通知の定期起動。
 -- 修飾キーの物理リマップ (caps→ctrl, cmd↔opt 入替, 日本語キー変換) は Karabiner が担当する。
 
 local home = os.getenv("HOME")
@@ -127,6 +127,17 @@ if morningURL then
   end)
   morningURLWatcher:start()
 end
+
+-- herdr: 接続先 machine の agent が done / idle / blocked になったら通知する。
+-- 手元の agent は herdr plugin の event hook が受けるが、machine の agent は手元の server に
+-- event が来ないので、ここから定期的に見に行く。判定と通知は script 側にある。
+-- timer / task は GC 回避のためグローバルに保持する。前回が終わっていなければ起動しない
+-- (ssh 先が応答しないときに process が積み上がるのを防ぐ)。
+herdrMachinePollTimer = hs.timer.doEvery(10, function()
+  if herdrMachinePollTask and herdrMachinePollTask:isRunning() then return end
+  herdrMachinePollTask = hs.task.new(home .. "/.config/herdr/agent-notify/poll-machines.sh", nil)
+  herdrMachinePollTask:start()
+end)
 
 -- 設定の自動リロード (開発ループ)。watcher は GC 回避のためグローバルに保持する。
 configWatcher = hs.pathwatcher.new(home .. "/.hammerspoon/", function(files)

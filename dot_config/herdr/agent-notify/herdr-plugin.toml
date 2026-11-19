@@ -1,0 +1,25 @@
+# herdr plugin: agent が done / idle / blocked になったら macOS 通知を出す。
+# 登録は `herdr plugin link ~/.config/herdr/agent-notify`（chezmoi apply が流す）。
+id = "local.agent-notify"
+name = "Agent Notify"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Notify when an agent becomes done, idle, or blocked. Click to focus its pane."
+platforms = ["macos"]
+
+[[events]]
+on = "pane.agent_status_changed"
+command = ["bash", "notify.sh"]
+
+# pane を見に行ったら、その agent の通知を取り下げる
+[[events]]
+on = "pane.focused"
+command = ["bash", "dismiss.sh"]
+
+[[events]]
+on = "tab.focused"
+command = ["bash", "dismiss.sh"]
+
+[[events]]
+on = "workspace.focused"
+command = ["bash", "dismiss.sh"]

@@ -119,15 +119,8 @@
          ([tab] . corfu-insert)
          ("C-h" . nil))       ; C-h を Backspace として使用可能に
   :init
-  (global-corfu-mode 1)
-  :config
-  ;; ターミナルサポート（Emacs 31+ は tty child frame で corfu 単体が動くため不要）
-  (when (and (not (display-graphic-p))
-             (< emacs-major-version 31))
-    (use-package corfu-terminal
-      :straight (:host github :repo "wyuenho/emacs-corfu-terminal")
-      :config
-      (corfu-terminal-mode 1))))
+  ;; tty でも corfu 単体で動く (Emacs 31+ の tty child frame)。corfu-terminal は不要。
+  (global-corfu-mode 1))
 
 ;; ------------------------------------------------------------
 ;; Cape (補完バックエンド拡張)

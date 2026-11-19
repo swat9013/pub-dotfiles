@@ -7,7 +7,7 @@
 
 # Optional parameters:
 # @raycast.icon 🧹
-# @raycast.description Desktop/Downloadの整理、Docker prune、ゴミ箱削除
+# @raycast.description Desktop/Downloadの整理、Docker prune、開発キャッシュ削除、ゴミ箱削除
 # @raycast.needsConfirmation true
 
 export PATH="/opt/homebrew/bin:$PATH"
@@ -104,6 +104,29 @@ if command -v docker &>/dev/null; then
   fi
 else
   echo "  SKIP: docker not found"
+fi
+echo ""
+
+# 開発キャッシュ（いずれも再取得できる）
+echo "=== 開発キャッシュ ==="
+if confirm_dialog "開発キャッシュ（uv の古い環境 / npm / Homebrew / アプリ更新用）を削除しますか？"; then
+  # uv cache clean は動作中の uv プロセスを待つため、7 日以上前の環境だけを直接消す。
+  # main-* は常駐する MCP server の環境なので残す。
+  find "${HOME}/.cache/uv/environments-v2" -mindepth 1 -maxdepth 1 -mtime +7 -not -name 'main-*' -exec rm -rf {} +
+  echo "  uv の古い環境を削除しました"
+  for cmd in "npm cache clean --force" "brew cleanup -s"; do
+    if ! command -v "${cmd%% *}" &>/dev/null; then
+      echo "  SKIP: ${cmd%% *} not found"
+    elif $cmd 2>&1; then
+      echo "  ${cmd} 完了"
+    else
+      echo "  ERROR: ${cmd} に失敗しました"
+    fi
+  done
+  rm -rf "${HOME}/Library/Caches/rancher-desktop-updater" "${HOME}/Library/Caches/com.microsoft.VSCode.ShipIt"
+  echo "  アプリ更新用キャッシュを削除しました"
+else
+  echo "  SKIP: 開発キャッシュの削除をキャンセルしました"
 fi
 echo ""
 

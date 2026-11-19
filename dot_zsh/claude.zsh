@@ -79,6 +79,11 @@ function ccf() {
   claude --model claude-fable-5 --effort medium "$@"
 }
 
+# Launch Claude Code with effort level
+alias cc-l='claude --effort low'
+alias cc-m='claude --effort medium'
+alias cc-h='claude --effort high'
+
 # Kill all running subagents
 function cck() {
   local pids=($(pgrep '^claude$' 2>/dev/null))

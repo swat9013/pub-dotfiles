@@ -17,9 +17,9 @@
 ;;; Code:
 
 ;; バイトコンパイラ向け宣言 (実体は各 ts-mode 読込時に定義される)
-(defvar typescript-ts-mode-indent-offset)
+(defvar typescript-ts-indent-offset)
 (defvar js-indent-level)
-(defvar json-ts-mode-indent-offset)
+(defvar json-ts-indent-offset)
 
 (defun my/ts-js-indent-setup ()
   "TS/JS バッファのタブ幅とインデント方式を設定する。"
@@ -33,7 +33,7 @@
   :straight nil
   :defer t
   :init
-  (setq typescript-ts-mode-indent-offset 2)
+  (setq typescript-ts-indent-offset 2)
   :hook
   (typescript-ts-mode . my/ts-js-indent-setup))
 
@@ -58,7 +58,7 @@
   :straight nil
   :defer t
   :init
-  (setq json-ts-mode-indent-offset 2))
+  (setq json-ts-indent-offset 2))
 
 (provide 'init-lang-ts)
 ;;; init-lang-ts.el ends here

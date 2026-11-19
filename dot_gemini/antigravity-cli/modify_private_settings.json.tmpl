@@ -1,0 +1,80 @@
+#!/bin/sh
+# ~/.gemini/antigravity-cli/settings.json に Claude Code の設定と CLI の既定を持ち込む。
+# chezmoi が現在の内容を stdin で渡し、stdout を新内容として書く。
+#
+# settings.json は Antigravity CLI 自身も /config や /permissions で書くため、file を
+# 正本で上書きせず、次の key だけを触る。ほかの key (model や permissions.allow 等) は残す。
+#   - agentMode: "auto" (編集の自動承認 + コマンド実行)
+#   - altScreenMode: "always" (full screen / altscreen モード)
+#   - editorMode: "default" (標準の Emacs 風キーバインド。vim モードを使わない)
+#   - enableTerminalSandbox: false (ターミナルサンドボックスを無効化)
+#   - statusLine: ~/.gemini/antigravity-cli/statusline.sh で Antigravity 専用ステータス
+#     (dir+git / cx+model / 全 .quota バケット一覧) を常時表示
+#   - permissions.ask / permissions.deny: Claude Code の正本 dot_claude/settings.base.json から
+#     毎回生成して置き換える (既存の permissions.allow はそのまま残す)
+set -eu
+
+current=$(cat)
+
+claude_settings=$(cat <<'BASE_JSON'
+{{ include "dot_claude/settings.base.json" -}}
+BASE_JSON
+)
+
+if [ -z "$current" ]; then
+	current='{}'
+fi
+
+status_line='{
+  "type": "command",
+  "command": "~/.gemini/antigravity-cli/statusline.sh",
+  "padding": 0,
+  "enabled": true,
+  "stack_with_default": false
+}'
+
+# Claude Code の rule を Antigravity の action(target) 形式に変換する。
+#   - Bash(X:*) → command(X *) (`:*` の無い Bash(...) は中身をそのまま target にする)
+#   - Read(...) → read_file(...)、Edit(...) → write_file(...)
+#     ./**/X は X (cwd 直下) と */X (下位 dir) の 2 本に展開し、** は * に畳む。
+#     / 起点の Claude Code 固有 path (//etc/passwd 等) は対象外として捨てる
+# shellcheck disable=SC2016 # jq の $var は shell で展開しない
+convert='
+  def fold: gsub("\\*\\*"; "*");
+  def paths:
+    if startswith("./**/") then .[5:] | fold | (., (select(startswith("*") | not) | "*/" + .))
+    elif startswith("./") then .[2:] | fold
+    elif startswith("/") then empty
+    else fold end;
+  def rules:
+    .[] | capture("^(?<tool>Bash|Read|Edit)\\((?<arg>.*)\\)$")
+    | if .tool == "Bash" then
+        "command(" + (.arg | if endswith(":*") then .[:-2] + " *" else . end) + ")"
+      elif .tool == "Read" then
+        "read_file(" + (.arg | paths) + ")"
+      else
+        "write_file(" + (.arg | paths) + ")"
+      end;
+  {
+    ask: [(.permissions.ask // [] | rules)],
+    deny: [(.permissions.deny // [] | rules)]
+  }
+'
+
+# jq 不在や壊れた JSON のときは現在の内容をそのまま返す (既存の設定を消さない)
+if command -v jq >/dev/null 2>&1 &&
+	perms=$(printf '%s' "$claude_settings" | jq -c "$convert" 2>/dev/null) &&
+	merged=$(printf '%s' "$current" | jq \
+		--argjson status_line "$status_line" \
+		--argjson perms "$perms" '
+	  .agentMode = "auto"
+	  | .altScreenMode = "always"
+	  | .editorMode = "default"
+	  | .enableTerminalSandbox = false
+	  | .statusLine = $status_line
+	  | .permissions = ((.permissions // {}) + $perms)
+	' 2>/dev/null); then
+	printf '%s\n' "$merged"
+else
+	printf '%s\n' "$current"
+fi

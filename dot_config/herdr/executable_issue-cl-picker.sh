@@ -3,7 +3,7 @@
 #   issue … prefix+shift+i（Ghostty cmd+shift+i → \x11I）
 #   cl    … prefix+shift+c（Ghostty cmd+shift+c → \x11C）。CL は GitHub PR / GitLab MR の総称
 #
-# 取得元は origin の host で選ぶ: github.com → gh / gitlab を含む host → glab（sbx-repo.sh と同じ規則）。
+# 取得元は origin の host で選ぶ: github.com → gh / gitlab を含む host → glab。
 # 一覧を出せないとき（repo 外・対応外の host・未認証など）は herdr の通知で理由を出して閉じる。
 # 起動元 pane は HERDR_ACTIVE_PANE_ID / HERDR_ACTIVE_PANE_CWD で受け取る（file-picker.sh と同型）。
 #

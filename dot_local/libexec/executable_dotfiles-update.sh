@@ -27,6 +27,19 @@ run_step() {
 
 # --- 更新群 ---
 
+# config から外した tool の install 実体が残ると、mise は shim を作り続ける。
+# shims は PATH 上で /opt/homebrew/bin より前にあり、version 未設定の shim は
+# 実行時にエラーになる。brew が attestation 検証で呼ぶ gh も shim に当たるため、
+# brew bundle より前に孤立した実体を消しておく (ADR 0019 移行の残骸で実測)。
+echo "=== mise prune ==="
+if command -v mise &>/dev/null; then
+  if ! mise prune --yes; then
+    errors+=("mise prune")
+  fi
+else
+  echo "SKIP: mise command not found"
+fi
+
 # trust の正本は Brewfile の `trusted: true` 宣言 (ADR 0019 §3、Homebrew 6.0+)。
 # install / cleanup とも entry 読込前に宣言を trust store へ適用するため、
 # 事前の brew trust step (brew-trust-taps.sh) は廃止した。
@@ -108,6 +121,22 @@ if command -v sheldon &>/dev/null; then
   fi
 else
   echo "SKIP: sheldon command not found"
+fi
+
+# marketplace の autoUpdate は Claude Code 起動時にしか走らないため、ここでも明示更新する。
+# 対象は user scope で有効な plugin のみ。@skills-dir は local directory 由来で更新元が無い。
+# -y は付けない: marketplace 宣言の install command を無人で承認しないため
+# (非 TTY では該当 plugin だけ失敗し、errors に載る)。
+echo "=== claude plugin update ==="
+if command -v claude &>/dev/null && command -v jq &>/dev/null; then
+  if run_step "claude marketplace update" claude plugin marketplace update; then
+    while IFS= read -r plugin; do
+      run_step "claude plugin update ${plugin}" claude plugin update --scope user "${plugin}"
+    done < <(claude plugin list --json \
+      | jq -r '.[] | select(.enabled and .scope == "user") | .id | select(endswith("@skills-dir") | not)')
+  fi
+else
+  echo "SKIP: claude or jq command not found"
 fi
 
 # --- 開発キャッシュ削除群 ---

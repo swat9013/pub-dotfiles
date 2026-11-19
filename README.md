@@ -11,11 +11,11 @@ chezmoi init --apply https://github.com/swat9013/pub-dotfiles.git
 
 ## apply 時に走るもの
 
-`run_*` script は `chezmoi apply` の一部として自動実行される。実行させたくない場合は `--exclude=scripts` を付ける (`chezmoi init --apply --exclude=scripts` / `chezmoi apply --exclude=scripts`)。個別に抑止するなら `.chezmoiignore` に attribute と `.tmpl` を剥いだ target 名 (例: `byte-compile-emacs.sh`) を書く (source 名のままではマッチしない)。
+`run_*` script は `chezmoi apply` の一部として自動実行される。実行させたくない場合は `--exclude=scripts` を付ける (`chezmoi init --apply --exclude=scripts` / `chezmoi apply --exclude=scripts`)。個別に抑止するなら `.chezmoiignore` に attribute と `.tmpl` を剥いだ target 名 (例: `remove-emacs-elc.sh`) を書く (source 名のままではマッチしない)。
 
 | script | 動作 | 条件 |
 |---|---|---|
-| `run_onchange_byte-compile-emacs.sh.tmpl` | `~/.emacs.d` の elisp を batch byte-compile | `emacs` と straight.el bootstrap が揃っているときのみ。いずれか欠けていれば何もしない |
+| `run_once_remove-emacs-elc.sh` | `~/.emacs.d` の `init.elc` / `early-init.elc` / `lisp/*.elc` を削除 | 初回の apply で 1 回だけ |
 
 `.Brewfile` は配布するが、インストールは自動化していない。必要なら任意のタイミングで実行する。
 
